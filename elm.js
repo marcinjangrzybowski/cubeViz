@@ -23305,8 +23305,6 @@ var $author$project$MicroAgda$Viz$Gui$inspectorCanvas = F5(
 					overlayCanv)
 				]));
 	});
-var $rtfeldman$elm_css$Css$maxHeight = $rtfeldman$elm_css$Css$prop1('max-height');
-var $rtfeldman$elm_css$Css$maxWidth = $rtfeldman$elm_css$Css$prop1('max-width');
 var $rtfeldman$elm_css$Css$minWidth = $rtfeldman$elm_css$Css$prop1('min-width');
 var $author$project$MicroAgda$Internal$TranslatePretty$t2strNoCtx = $author$project$MicroAgda$Internal$TranslatePretty$t2str($author$project$MicroAgda$Internal$Ctx$emptyCtx);
 var $author$project$MicroAgda$Viz$CodeViz$signatureVizHtml = function (ct) {
@@ -23415,12 +23413,11 @@ var $author$project$MicroAgda$Viz$Gui$vizHtmlWindow = function (mba) {
 															$rtfeldman$elm_css$Html$Styled$Attributes$css(
 															_List_fromArray(
 																[
-																	$rtfeldman$elm_css$Css$maxWidth(
-																	$rtfeldman$elm_css$Css$vw(100)),
-																	$rtfeldman$elm_css$Css$maxHeight(
-																	$rtfeldman$elm_css$Css$vh(100)),
 																	$rtfeldman$elm_css$Css$width(
-																	$rtfeldman$elm_css$Css$px(bigCanvasSize))
+																	$rtfeldman$elm_css$Css$px(bigCanvasSize)),
+																	$rtfeldman$elm_css$Css$height(
+																	$rtfeldman$elm_css$Css$px(bigCanvasSize)),
+																	$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$relative)
 																]))
 														]))),
 											$elm$core$Result$Ok(

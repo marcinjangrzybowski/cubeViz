@@ -328,9 +328,12 @@ vizHtmlWindow mba =
                       |> Result.map (List.singleton >>
                      div [css [
                             -- position absolute , top (px 0) , left (px 0) 
-                              maxWidth (vw 100)
-                              , maxHeight (vh 100)
-                              , width (px  bigCanvasSize)   
+--                              maxWidth (vw 100)
+--                              , maxHeight (vh 100)
+                              --,
+                                  width (px  bigCanvasSize)
+                                  , height (px  bigCanvasSize)
+                                  , position relative    
                           ]])
                 ] |> List.reverse
                |> mapListResult (identity)
