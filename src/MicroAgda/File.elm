@@ -348,6 +348,12 @@ readFile (UnParsedFile name upf) =
     let (mds , mbC) = tcDefsList emptyCtx upf in
     ((File name mds) , mbC)
 
+maybeDef : MADefinition d -> Maybe (CType , I.Term)
+maybeDef = (Result.toMaybe >>
+        Maybe.map (\def -> (getSignatureCT def , getBodyTm def))
+        -- >> Maybe.map (\(x , y) -> (y , x))        
+           )
+           
 lastDefinition : File d -> Maybe (CType , I.Term)
 lastDefinition (File _ l) =
     List.head (List.reverse l)

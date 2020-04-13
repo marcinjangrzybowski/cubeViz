@@ -1,9 +1,9 @@
-module MicroAgda.SampleFiles.Evan exposing (content)
+module MicroAgda.SampleFiles.AssocAlt exposing (content)
 
 import MicroAgda.File exposing (upc,mkFile)
 
 
-content = mkFile "evan" [        
+content = mkFile "assocAlt"  [        
     upc "hfill" """
 ∀ ( l : Level ) → ∀ ( A : Type l) 
         → ∀ (φ : I)
@@ -118,6 +118,24 @@ hcomp l A (~ i ∨ i ∨ j)
          }) (pq i j)
        """ []
    ,
+   upc "compSq'"  """∀ (l : Level) → ∀ (A : Type l)
+        → ∀ (x y : A) 
+        → ∀ (p q r s : Path l A x y)
+        → ∀ (pq : Path l (Path l A x y) p q)
+        → ∀ (qr : Path l (Path l A x y) q r)
+        → ∀ (rs : Path l (Path l A x y) r s)
+        → Path l (Path l A x y) p s
+    """
+     ["l" , "A" , "x" , "y" , "p" , "q" , "r" ,"s" , "pq" , "qr" , "rs" , "i" , "j"]
+       """
+       hcomp l A (i ∨ ~ i ∨ j ∨ ~ j) (λ k → λ {
+          (i = i0) → pq (~ k) j
+        ; (i = i1) → (rs k j)
+        ; (j = i0) → x
+        ; (j = i1) → y
+         }) (qr i j)
+       """ []
+   ,       
      upc
      "congPa" """∀ (l : Level) → ∀ (A : Type l)
              → ∀ (x y z : A)
@@ -192,7 +210,39 @@ hcomp l A (~ i ∨ i ∨ j)
         (compPath l A x z w (compPath l A x y z p q) r)
         (assoc' l A x y z w p q r))""" []
 
-    ]
+   , upc "pentB'"
 
-                                      
+    """
+    ∀ ( l : Level ) → ∀ ( A : Type l ) → ∀ (x y z w v : A) → 
+    ∀ (p : Path l A x y) →  ∀ (q : Path l A y z) →  ∀ (r : Path l A z w) →  ∀ (s : Path l A w v)
+      → I → I → A
+    """
+       ["l" ,"A" , "x" , "y" , "z" , "w" , "v" , "p" , "q" , "r" ,"s"]
+
+            """
+  compSq' l A x v
+
+  (compPath l A x y v p
+    (compPath l A y z v q (compPath l A z w v r s)))
+
+  (compPath l A x y v p
+    (compPath l A y w v (compPath l A y z w q r) s))
+
+  (compPath l A x w v (compPath l A x y w p (compPath l A y z w q r))
+    s)
+
+  (compPath l A x w v (compPath l A x z w (compPath l A x y z p q) r)
+    s)
+
+  (congPa2 l A x y v p (compPath l A y z v q (compPath l A z w v r s))
+  (compPath l A y w v (compPath l A y z w q r) s)
+    (assoc' l A y z w v q r s))
+    
+  (assoc' l A x y w v p (compPath l A y z w q r) s)
+
+  (congPa l A x w v s (compPath l A x y w p (compPath l A y z w q r))
+  (compPath l A x z w (compPath l A x y z p q) r)
+  (assoc' l A x y z w p q r))""" []                                       
+   
+  ]
        

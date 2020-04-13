@@ -1,0 +1,194 @@
+---- Elm 0.19.1 ----------------------------------------------------------------
+Say :help for help and :exit to exit! More at <https://elm-lang.org/0.19.1/repl>
+--------------------------------------------------------------------------------
+> :reset
+<reset>
+> import MicroAgda.StringTools exposing (..) 
+> Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"]
+-- NAMING ERROR ----------------------------------------------------------- REPL
+
+I cannot find a `Set.fromList` variable:
+
+4|   Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"]
+     ^^^^^^^^^^^^
+I cannot find a `Set` import. These names seem close though:
+
+    String.fromList
+    String.fromInt
+    Char.fromCode
+    List.foldl
+
+Hint: Read <https://elm-lang.org/0.19.1/imports> to see how `import`
+declarations work in Elm.
+
+> Set import exposing (..)
+| 
+-- RESERVED WORD ---------------------------------------------------------- REPL
+
+I got stuck on this reserved word:
+
+4|   Set import exposing (..)
+         ^^^^^^
+The name `import` is reserved, so try using a different name?
+
+> import Set exposing (..)
+> Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"]
+Set.fromList ["a","a1","b","b0","b4"]
+    : Set String
+> Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+Set.fromList ["a","a1","b","b0","b4"]
+    : Set String
+> xx = Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+Set.fromList ["a","a1","b","b0","b4"]
+    : Set String
+> xx = Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+Set.fromList ["a","a1","b","b0","b4"]
+    : Set String
+> makeFresh "c" xx
+"c0" : String
+> :reset
+<reset>
+> import MicroAgda.StringTools exposing (..) 
+> makeFresh "c" xx
+-- NAMING ERROR ----------------------------------------------------------- REPL
+
+I cannot find a `xx` variable:
+
+4|   makeFresh "c" xx
+                   ^^
+These names seem close though:
+
+    e
+    max
+    pi
+    xor
+
+Hint: Read <https://elm-lang.org/0.19.1/imports> to see how `import`
+declarations work in Elm.
+
+> xx = Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+-- NAMING ERROR ----------------------------------------------------------- REPL
+
+I cannot find a `Set.fromList` variable:
+
+3| xx = Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+        ^^^^^^^^^^^^
+I cannot find a `Set` import. These names seem close though:
+
+    String.fromList
+    String.fromInt
+    Char.fromCode
+    List.foldl
+
+Hint: Read <https://elm-lang.org/0.19.1/imports> to see how `import`
+declarations work in Elm.
+
+> import Set exposing (..)
+> xx = Set.fromList [ "a" , "b" , "a1"  , "b0" , "b4"] 
+Set.fromList ["a","a1","b","b0","b4"]
+    : Set String
+> makeFresh "c" xx
+"c" : String
+> makeFresh "a" xx
+"a0" : String
+> makeFresh "a1" xx
+"a2" : String
+> makeFresh "b" xx
+"b1" : String
+> makeFresh "b4" xx
+"b5" : String
+> :reset
+<reset>
+> import MicroAgda.StringTools exposing (..) 
+> import Set exposing (..)
+> xx = Set.fromList [ "a" , "b" , "a1" , "a0" , "a3"  , "b0" , "b4"] 
+Set.fromList ["a","a0","a1","a3","b","b0","b4"]
+    : Set String
+> makeFreshDict xx
+Dict.fromList [("a","a2"),("a0","a2"),("a1","a2"),("a3","a4"),("b","b1"),("b0","b1"),("b4","b5")]
+    : Dict.Dict String String
+> :reset
+<reset>
+> import MicroAgda.StringTools exposing (..) 
+> import Set exposing (..)
+> xx = Set.fromList [ "a" , "b" , "a1" , "a0" , "a3"  , "b0" , "b4"] 
+Set.fromList ["a","a0","a1","a3","b","b0","b4"]
+    : Set String
+> makeFreshDict xx
+Dict.fromList [("a","a2"),("a0","a4"),("a1","a5"),("a3","a6"),("b","b1"),("b0","b2"),("b4","b5")]
+    : Dict.Dict String String
+> :reset
+<reset>
+> import MicroAgda.TypeChecker exposing (..) 
+-- SYNTAX PROBLEM -------------------------------- src/MicroAgda/TypeChecker.elm
+
+I got stuck here:
+
+60|       (x :: xs) -> (todo "")
+          ^
+Whatever I am running into is confusing me a lot! Normally I can give fairly
+specific hints, but something is really tripping me up this time.
+
+> :reset
+<reset>
+> import MicroAgda.TypeChecker exposing (..) 
+> :reset
+<reset>
+> import MicroAgda.TypeChecker exposing (..) 
+-- TYPE MISMATCH --------------------------------- src/MicroAgda/TypeChecker.elm
+
+Something is off with the body of the `checkIfPi` definition:
+
+24| checkIfPi e = Result.fromMaybe e (toTm >> toPiData) 
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This `fromMaybe` call produces:
+
+    Result e a
+
+But the type annotation on `checkIfPi` says it should be:
+
+    Result e ( a, CType ) -> Result e ( a, PiData )
+
+-- TYPE MISMATCH --------------------------------- src/MicroAgda/TypeChecker.elm
+
+The 2nd argument to `fromMaybe` is not what I expect:
+
+24| checkIfPi e = Result.fromMaybe e (toTm >> toPiData) 
+                                      ^^^^^^^^^^^^^^^^
+This argument is:
+
+    CType -> Maybe PiData
+
+But `fromMaybe` needs the 2nd argument to be:
+
+    Maybe a
+
+Hint: I always figure out the argument types from left to right. If an argument
+is acceptable, I assume it is “correct” and move on. So the problem may actually
+be in one of the previous arguments!
+
+> :reset
+<reset>
+> import MicroAgda.TypeChecker exposing (..) 
+-- UNFINISHED DEFINITION ------------------------- src/MicroAgda/TypeChecker.elm
+
+I got stuck while parsing the `resMaybePopOut` definition:
+
+22| resMaybePopOut : e -> Result e ( a, Maybe b ) -> Result e ( a, b )
+23| resMaybePopOut = 
+                    ^
+I was expecting to see an expression next. What is it equal to?
+
+Here is a valid definition (with a type annotation) for reference:
+
+    greet : String -> String
+    greet name =
+      "Hello " ++ name ++ "!"
+
+The top line (called a "type annotation") is optional. You can leave it off if
+you want. As you get more comfortable with Elm and as your project grows, it
+becomes more and more valuable to add them though! They work great as
+compiler-verified documentation, and they often improve error messages!
+
+> 
+> 

@@ -63,57 +63,72 @@ lamPCase2String (fe , b) =
 
 raw2StringHlpAgda : Bool -> Raw -> String
 raw2StringHlpAgda onRight x =
-    case x of
-        Pi a b c -> "∀ (" ++ a ++ " : " ++ raw2String b ++ ") → " ++ raw2String c
-        Lam a c ->
-            "λ " ++ a ++ " → " ++ raw2String c |> ifTputIntoP True           
-        Var a -> a
+    let pathAware = True in
+    
+    case (pathAware , x) of
+        (_ , Pi a b c) -> "∀ (" ++ a ++ " : " ++ raw2String b ++ ") → " ++ raw2String c
+        (_ , Lam a (App b (Var d)) ) ->
+            if (a == d) then raw2String b
+            else
+                 let c = (App b (Var d)) in 
+                 ("λ " ++ a ++ " → " ++ raw2String c |> ifTputIntoP True)    
+        (_ , Lam a c ) ->
+            if (Set.member a (freeVars c))
+            then "λ " ++ a ++ " → " ++ raw2String c |> ifTputIntoP True
+            else "λ_→ " ++ raw2String c |> ifTputIntoP True    
+        (_ , Var a )-> a
         -- (App (Var "~") (Var a)) ->
         --     ("~" ++ a)
-
-        App (App (App (Var "hcomp") a) b) c ->
+        -- (_ , App (App (App (App (Var "PathP") a) b) c) d) -> 
+        --     ("Square" (raw2String c) ++ " " ++ (raw2String d)
+        --          ++ " " ++ (raw2String c) ++ " " ++ (raw2String c) )
+        (_ , App (App (Var "_≡_") a) b) -> 
+            ((raw2String a) ++ " ≡ " ++ (raw2String b))               
+        -- (_ , App (App (App (App (Var "Sq") a) b) c) d) -> 
+        --     ((raw2String c) ++ " ≡ " ++ (raw2String d))
+        (_ , App (App (App (Var "hcomp") a) b) c) ->
             "(hcomp {"++ raw2String a ++"} {"++ raw2String b++"} {"++raw2String c ++"} )"
-        App (App (App (Var "hfill") a) b) c ->
+        (_ , App (App (App (Var "hfill") a) b) c) ->
             "(hfill {"++ raw2String a ++"} {"++ raw2String b++"} {"++raw2String c ++"} )"
-        App (App (App (Var "inS") a) b) c ->
+        (_ , App (App (App (Var "inS") a) b) c) ->
             "(inS {"++ raw2String a ++"} {"++ raw2String b++"} {"++raw2String c ++"} )"
-        App (App (App (App (Var "outS") a) b) c) d ->
+        (_ , App (App (App (App (Var "outS") a) b) c) d) ->
             "(outS {"++ raw2String a ++"} {"++ raw2String b++"} {"++raw2String c ++"} {"++raw2String d ++"} )"
         -- App (App (App (App (Var "outS") a) b) c) d ->
         --     "(outS)"                
-        App (App (Var "Max") a) b ->
-            ifTputIntoP onRight (raw2StringHlp True a ++ " ∨ " ++ raw2String b)
-        App (App (Var "Min") a) b ->
-            ifTputIntoP onRight (raw2StringHlp True a ++ " ∧ " ++ raw2String b)        
+        (_ , App (App (Var "Max") a) b) ->
+            ifTputIntoP onRight (raw2StringHlpAgda True a ++ " ∨ " ++ raw2String b)
+        (_ , App (App (Var "Min") a) b) ->
+            ifTputIntoP onRight (raw2StringHlpAgda True a ++ " ∧ " ++ raw2String b)        
             
-        App a b ->
-            ifTputIntoP onRight (raw2String a ++ " " ++ raw2StringHlp True b)
-        LamP l -> 
+        (_ , App a b) ->
+            ifTputIntoP onRight (raw2String a ++ " " ++ raw2StringHlpAgda True b)
+        (_ , LamP l) -> 
             indent 3 ("\n(λ {\n   "
                 ++ (indent 6 (String.join "\n ; " (List.map lamPCase2String l)))
                 ++ "\n   })\n")        
         
-raw2StringHlp : Bool -> Raw -> String
-raw2StringHlp onRight x =
-    case x of
-        Pi a b c ->
-            "∀ (" ++ a ++ " : " ++ raw2String b ++ ") → " ++ raw2String c
-        Lam a c ->
-            "λ " ++ a ++ " → " ++ raw2String c |> ifTputIntoP True           
-        Var a -> a
-        -- (App (Var "~") (Var a)) ->
-        --     ("~" ++ a)         
-        App (App (Var "Max") a) b ->
-            ifTputIntoP onRight (raw2StringHlp True a ++ " ∨ " ++ raw2String b)
-        App (App (Var "Min") a) b ->
-            ifTputIntoP onRight (raw2StringHlp True a ++ " ∧ " ++ raw2String b)        
+-- raw2StringHlp : Bool -> Raw -> String
+-- raw2StringHlp onRight x =
+--     case x of
+--         Pi a b c ->
+--             "∀ (" ++ a ++ " : " ++ raw2String b ++ ") → " ++ raw2String c
+--         Lam a c ->
+--             "λ " ++ a ++ " → " ++ raw2String c |> ifTputIntoP True           
+--         Var a -> a
+--         -- (App (Var "~") (Var a)) ->
+--         --     ("~" ++ a)         
+--         App (App (Var "Max") a) b ->
+--             ifTputIntoP onRight (raw2StringHlp True a ++ " ∨ " ++ raw2String b)
+--         App (App (Var "Min") a) b ->
+--             ifTputIntoP onRight (raw2StringHlp True a ++ " ∧ " ++ raw2String b)        
             
-        App a b ->
-            ifTputIntoP onRight (raw2String a ++ " " ++ raw2StringHlp True b)
-        LamP l -> 
-            indent 3 ("\n(λ {\n   "
-                ++ (indent 6 (String.join "\n ; " (List.map lamPCase2String l)))
-                ++ "\n   })\n")        
+--         App a b ->
+--             ifTputIntoP onRight (raw2String a ++ " " ++ raw2StringHlp True b)
+--         LamP l -> 
+--             indent 3 ("\n(λ {\n   "
+--                 ++ (indent 6 (String.join "\n ; " (List.map lamPCase2String l)))
+--                 ++ "\n   })\n")        
 
                 
 raw2String : Raw -> String
@@ -161,7 +176,7 @@ fixAbsNames defInCtx r =
                          (freeVars r) in
     if isEmpty undefs
     then Ok (renameAbs (union defInCtx buildInNamesSet)  r )
-    else Err (foldl (\x -> \y -> x ++ ", " ++ y) "Undefined: " (undefs) )
+    else Err ("fixAbsNames : undefined: " ++ foldl (\x -> \y -> x ++ ", " ++ y) "" (undefs) )
                 
 renameAbs : Set String -> Raw -> Raw                   
 renameAbs = makeFreshDict >> renameAbsD
@@ -208,3 +223,7 @@ whnf = toTailForm >> whnfTF
 --        App x y -> let ( h , t ) = (whnf x)
 --                   in (h , List.append t [y])                      
 --        x -> (x , [])              
+
+
+
+---- path aware printing             

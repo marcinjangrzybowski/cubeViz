@@ -1,8 +1,8 @@
-module MicroAgda.SampleFiles.Assoc exposing (content)
+module MicroAgda.SampleFiles.FaceTest exposing (content)
 
 import MicroAgda.File exposing (upc,mkFile)
 
-content = mkFile "assoc" [        
+content = mkFile "faceTest" [        
     upc "hfill" """
 ∀ ( l : Level ) → ∀ ( A : Type l) 
         → ∀ (φ : I)
@@ -125,6 +125,25 @@ hfill l A (~ i ∨ i ∨ ~ j ∨ j)
     """
        []
   ,
+   upc "assoc22"
+       """
+    ∀ (l : Level) → ∀ (A : Type l)
+            → ∀ (x y z w : A)
+            → ∀ (p : Path l A x y) → ∀ (q : Path l A y z)
+                       → ∀ (r : Path l A z w) →
+      Path l (Path l A x w)                  
+     (compPath l A x y w p (compPath l A y z w q r))
+     (compPath l A x z w (compPath l A x y z p  q) r)
+        """
+        ["l", "A", "x", "y", "z", "w" ,"p", "q", "r" , "i" , "j"] 
+    """
+    3outof4 l A
+      (compPath-filler l A x y w p (compPath l A y z w q r))
+      (compPath l A x z w (compPath l A x y z p q) r)
+      (preassoc l A x y z w  p q r) j (i)  
+    """
+   []
+  ,
    upc "assoc"
        """
     ∀ (l : Level) → ∀ (A : Type l)
@@ -143,6 +162,22 @@ hfill l A (~ i ∨ i ∨ ~ j ∨ j)
       (preassoc l A x y z w  p q r)  
     """
    []
-
+  ,
+   upc "ft1"
+       """
+   ∀ (l : Level) → ∀ (A : Type l)
+        → ∀ (x y z w : A) 
+        → ∀ (xy : Path l A x y)
+        → ∀ (xz : Path l A x z)
+        → ∀ (yw : Path l A y w)
+        → ∀ (zw : Path l A z w)
+        → ∀ (c : PathP l (λ j → (Path l A (xz j) (yw j))) xy zw)
+        → I →  A
+        """
+        ["l", "A", "x", "y", "z", "w", "xy", "xz" ,"yw", "zw" , "c" , "i" ] 
+    """
+      c i i
+    """
+   []
        
   ]

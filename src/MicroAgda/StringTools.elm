@@ -40,6 +40,14 @@ makeFresh x l = if Set.member x l
                 then makeFresh2 (splitNameNum x) l
                 else x   
 
+makeFreshList : List String -> Set String -> List String
+makeFreshList ls0 ss0 =
+    List.foldl (\name -> \(ls , ss) ->
+                    let new = makeFresh name ss in
+                    (new :: ls , Set.insert name ss)
+               ) ([] , ss0) ls0
+   |> Tuple.first |> List.reverse
+                    
 makeFreshDict : Set String  -> Dict String String
 makeFreshDict l = Set.foldl
                   (\s -> \d ->

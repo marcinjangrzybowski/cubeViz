@@ -36,116 +36,112 @@ import MicroAgda.Viz exposing (..)
 
 type alias Raster = (Int -> Float) -> Color.Color
 
-fillRasterIPR : Interpreter (Raster)
-fillRasterIPR =
-     let
+-- fillRasterIPR : Interpreter (Raster)
+-- fillRasterIPR =
+--      let
 
-           toHcompArg : (Face -> Raster) -> Raster ->
-                         Maybe (Face) -> (Bool , Raster) 
-           toHcompArg si bo =
-                  Maybe.map si
-               >> Maybe.withDefault bo  
-               >> (Tuple.pair True)
+--            toHcompArg : (Face -> Raster) -> Raster ->
+--                          Maybe (Face) -> (Bool , Raster) 
+--            toHcompArg si bo =
+--                   Maybe.map si
+--                >> Maybe.withDefault bo  
+--                >> (Tuple.pair True)
 
-           fillColor = const Color.black
+--            fillColor = const Color.black
                    
-           fiMi : Int -> CubAC (Raster) -> CubBB (Raster)
-           fiMi n c =
-               case c of
-                   PCubA x -> PCubB (x , False)
-                   HcompA si bo -> 
-                                    HcompB
-                                   (\(j , b) ->
-                                    faceToSubFace n (j , b)
-                                    |> si
-                                    |> Maybe.map (fiMi n)
-                                    |> Maybe.withDefault (PCubB (fillColor , True))
-                                    -- |> pCubMapB
-                                    --     (Tuple.mapFirst (
-                                    --       (sideOrientationFix n (j , b)) ))
-                                    -- |> pCubMapBFace (Tuple.mapFirst (switchVars 0 1))   
-                                   )
-                                   (fiMi n bo)
+--            fiMi : Int -> CubAC (Raster) -> CubBB (Raster)
+--            fiMi n c =
+--                case c of
+--                    PCubA x -> PCubB (x , False)
+--                    HcompA si bo -> 
+--                                     HcompB
+--                                    (\(j , b) ->
+--                                     faceToSubFace n (j , b)
+--                                     |> si
+--                                     |> Maybe.map (fiMi n)
+--                                     |> Maybe.withDefault (PCubB (fillColor , True))
+--                                     -- |> pCubMapB
+--                                     --     (Tuple.mapFirst (
+--                                     --       (sideOrientationFix n (j , b)) ))
+--                                     -- |> pCubMapBFace (Tuple.mapFirst (switchVars 0 1))   
+--                                    )
+--                                    (fiMi n bo)
                    
-           colA : Int -> CubBB (Raster) -> Raster 
-           colA n c =
-               case c of
-                   PCubB (x , _) -> x
-                   HcompB si bo ->
-                       hcomp 2 (toHcompArg (si >> colA n) (colA n bo)) 
+--            colA : Int -> CubBB (Raster) -> Raster 
+--            colA n c =
+--                case c of
+--                    PCubB (x , _) -> x
+--                    HcompB si bo ->
+--                        hcomp 2 (toHcompArg (si >> colA n) (colA n bo)) 
 
-     in
+--      in
              
-        {
-           toStr = const2 "rasterOK"
-         , renderCells = const2 (Ok (const Color.red)) 
-         , fillMissing = fiMi
-         , transA3 = const identity        
-         , transA3fill = const2 (identity)
-         , collectAll = colA
+--         {
+--            toStr = const2 "rasterOK"
+--          , renderCells = const2 (Ok (const Color.red)) 
+--          , fillMissing = fiMi
+--          , collectAll = colA
                       
                
-        }       
+--         }       
     
-rasterIPR : Interpreter (Raster)
-rasterIPR =
-     let
+-- rasterIPR : Interpreter (Raster)
+-- rasterIPR =
+--      let
 
-           toHcompArg : (Face -> Raster) -> Raster ->
-                         Maybe (Face) -> (Bool , Raster) 
-           toHcompArg si bo =
-                  Maybe.map si
-               >> Maybe.withDefault bo  
-               >> (Tuple.pair True)
+--            toHcompArg : (Face -> Raster) -> Raster ->
+--                          Maybe (Face) -> (Bool , Raster) 
+--            toHcompArg si bo =
+--                   Maybe.map si
+--                >> Maybe.withDefault bo  
+--                >> (Tuple.pair True)
 
-           fillColor = const Color.black
+--            fillColor = const Color.black
                    
-           fiMi : Int -> CubAC (Raster) -> CubBB (Raster)
-           fiMi n c =
-               case c of
-                   PCubA x -> PCubB (x , False)
-                   HcompA si bo -> 
-                                    HcompB
-                                   (\(j , b) ->
-                                      faceToSubFace n (j , b)
-                                     |> si
-                                     |> Maybe.map (fiMi n)
-                                     |> Maybe.withDefault (PCubB (fillColor , True))
-                                     |> pCubMapB
-                                        (Tuple.mapFirst (
-                                          (sideOrientationFix n (j , b)) ))
-                                     |> pCubMapBFace (Tuple.mapFirst (switchVars (n - 1) j))     
-                                   )
-                                   (fiMi n bo)
+--            fiMi : Int -> CubAC (Raster) -> CubBB (Raster)
+--            fiMi n c =
+--                case c of
+--                    PCubA x -> PCubB (x , False)
+--                    HcompA si bo -> 
+--                                     HcompB
+--                                    (\(j , b) ->
+--                                       faceToSubFace n (j , b)
+--                                      |> si
+--                                      |> Maybe.map (fiMi n)
+--                                      |> Maybe.withDefault (PCubB (fillColor , True))
+--                                      |> pCubMapB
+--                                         (Tuple.mapFirst (
+--                                           (sideOrientationFix n (j , b)) ))
+--                                      |> pCubMapBFace (Tuple.mapFirst (switchVars (n - 1) j))     
+--                                    )
+--                                    (fiMi n bo)
                    
-           colA : Int -> CubBB (Raster) -> Raster 
-           colA n c =
-               case c of
-                   PCubB (x , _) -> x
-                   HcompB si bo ->
-                       hcomp n (toHcompArg (si >> colA n) (colA n bo)) 
+--            colA : Int -> CubBB (Raster) -> Raster 
+--            colA n c =
+--                case c of
+--                    PCubB (x , _) -> x
+--                    HcompB si bo ->
+--                        hcomp n (toHcompArg (si >> colA n) (colA n bo)) 
 
 
-           csr = stripesRasterizer                
+--            csr = stripesRasterizer                
                            
-           renderCell : Int -> Cell -> Result String Raster
-           renderCell n cl = composePieces n (cl >> renderCSet csr) |> Ok              
+--            renderCell : Int -> Cell -> Result String Raster
+--            renderCell n cl = composePieces n (cl >> renderCSet csr) |> Ok              
 
 
-           --sideTA3 n f = Tuple.mapFirst (sideOrientationFix n f)                   
+--            --sideTA3 n f = Tuple.mapFirst (sideOrientationFix n f)                   
                                 
-     in
+--      in
        
-        {
-           toStr = const2 "rasterOK"
-         , renderCells = renderCell  
-         , fillMissing = fiMi
-         , transA3 = const identity        
-         , transA3fill = const2 identity
-         , collectAll = colA
+--         {
+--            toStr = const2 "rasterOK"
+--          , renderCells = renderCell  
+--          , fillMissing = fiMi
+--          , collectAll = colA
                       
                
-        }                     
+--         }                     
 
 
 
@@ -188,8 +184,22 @@ switchVars j k x =
     then k
     else (if (x == k)
          then j
-         else x)   
-        
+         else x)
+
+switchVarsSF : Int -> SubFace -> SubFace -> SubFace
+switchVarsSF n sf =
+    subFaceLI.toL sf |> List.indexedMap (Tuple.pair >> Maybe.map)
+        |> List.filterMap identity |> List.head
+        |> Maybe.map (\(j , _ ) -> \sff ->
+                 let sfl = subFaceLI.toL sff in         
+                 (sfl) |> List.reverse |>
+                 List.head |> (Maybe.map (\xx ->
+                                    listInsert j xx (List.reverse (List.drop 1 (List.reverse sfl)))
+                               ))
+                     |> Maybe.withDefault (sfl)          
+                     )
+        |> Maybe.map (postcompose (subFaceLI.fromL))  
+        |> Maybe.withDefault identity
 
 -- n is dimension! not index of var                       
 sideOrientationFix : Int -> Face -> ((Int -> y) -> x) -> ((Int -> y) -> x)
@@ -329,7 +339,7 @@ modF : Float -> Float
 modF x = x - (toFloat (floor x)) 
 
 nThColor : Int -> Color.Color    
-nThColor x = Color.hsl (modF ((2/16) * (toFloat x)))  1.0 0.5
+nThColor x = Color.hsl (modF ((3/16) * (toFloat x)))  1.0 0.5
                      
 
 negF : Float -> Float

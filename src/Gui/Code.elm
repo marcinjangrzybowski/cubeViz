@@ -21,6 +21,7 @@ import Platform.Cmd
 import MicroAgda.Parser exposing (mainParser)
 import MicroAgda.TCTests as TCT
 import MicroAgda.Raw as R
+import MicroAgda.Internal.Term as I 
 import MicroAgda.Internal.Ctx as C 
 import MicroAgda.Internal.Translate as T
 
@@ -151,7 +152,7 @@ def2Html f =
 
 
 dummy : d -> Html msg        
-dummy _ = div [] []
+dummy _ = div [css [display none] ] []
 -- file2Html : File () -> Html msg
 -- file2Html (File name l) = div []
 --                           ( (List.map (def2Html (\_-> div [] [])) l ))            
@@ -171,29 +172,64 @@ errBox =
     convergeResult
         (\(code , el) -> (div [] (List.map (deadEnd2Html code) el)))
         (\estr -> div [] [text estr])    
-        
+
+
+codeIconSize = 256            
                   
-simpleDef2Html :  MADefinition d -> Html msg 
-simpleDef2Html def =
-    let h0 = [def2HeadCode def]
+simpleDef2Html : File2HtmlSetings msg -> (Int -> (C.CType , I.Term) -> Maybe (List (Html msg)))
+                       ->  MADefinition d -> Html msg 
+simpleDef2Html f2hs iconF def =
+    let h0 = [def2HeadCode def ]
             |> div [ css [position relative
                      , backgroundColor (gray 240)
                      ,  marginTop (px 3)] ]            
     in
     let h =
             def
-           |> Result.map (\tcd -> [h0 , unParsed2Html dummy (unParseTC tcd) ]  )
-           |> Result.withDefault [h0] in   
+           |> Result.map (\tcd ->
+                              (maybeDef def
+                                   |> Maybe.andThen (iconF codeIconSize)
+                                   |> Maybe.map (\icon ->
+                                            [div [css [ position relative
+                                                      , minHeight (px codeIconSize)
+                                                      , backgroundColor (gray 240)
+                                                      ]] [
+                                                  div [
+                                                        onClick (f2hs.onIconClick (getName tcd)) 
+                                                        , css [
+                                                        cursor pointer     
+                                                        , position absolute
+                                                        , top (px 0) , left (px 0)    
+ 
+                                                       ]] icon 
+                                                , div [css [
+                                                        position relative
+                                                      , left (px (codeIconSize + 15))
+                                                       , top (px 0)
+                                                       , width (pct 75)          
+                                                       ]] [h0]
+                                                 ]]
+                                                )
+                                   |> Maybe.withDefault ( [] )
+                              -- , unParsed2Html dummy (unParseTC tcd)
+                               )
+                           -- |> (List.append ([unParsed2Html dummy (unParseTC tcd)]))
+                                )
+           |> Result.withDefault [] in   
     let tl =
-            List.map simpleDef2Html (getMADTail def)
+            List.map (simpleDef2Html f2hs iconF) (getMADTail def)
             |> div [css [ marginLeft (px 20) ] ]
     in
     extractErr def
     |> Maybe.map (\e -> div [] (List.append h [errBox e , tl]))     
     |> Maybe.withDefault (div [] (List.append h [tl]))
-                  
-file2Html : File () -> Html msg
-file2Html (File name l) = div [
+
+type alias File2HtmlSetings msg = { onIconClick : String -> msg }
+       
+file2Html : (Int -> (C.CType , I.Term)
+               -> Maybe (List (Html msg)))
+           -> File2HtmlSetings msg -> File () -> Html msg
+file2Html iconF f2hs (File name l) = div [
                            css [
                               border3 (px 1) solid black
                              , paddingLeft (px 30)     
@@ -201,5 +237,5 @@ file2Html (File name l) = div [
                           ]
                           ( (List.map (
                                        
-                                       simpleDef2Html    
+                                       simpleDef2Html f2hs iconF    
                                       ) l ))            

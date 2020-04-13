@@ -94,19 +94,38 @@ renderSquare =
       [ rect (100, 100) 100 50 ]             
 
 
-drawingHTML : (Drawing Color.Color) -> Html msg
-drawingHTML =
-        let
-            width = 512
-            height = 512
-        in         
-    pxScale (512 , 512) >> toRenderableAll identity >>
-    (\rls ->
+type alias DrawingHTMLSettings = { width : Int , height : Int , bgColor : Maybe Color.Color }
 
-        Canvas.toHtml (width, height)
-            [ style "border" "1px solid black" ]
-            (List.append [ shapes [ fill Color.white ] [ rect (0, 0) width height ] ]
-                (
-                  rls
-                ))                
-     )
+
+defaultDrawingHTMLSettings = { width = 1024 , height = 1024 , bgColor = Just Color.white }
+
+defCanvSet = defaultDrawingHTMLSettings
+                             
+drawingHTML : Maybe DrawingHTMLSettings -> (Drawing MetaColor) -> Html msg
+drawingHTML =
+    Maybe.withDefault defaultDrawingHTMLSettings >>
+    (\ds ->    
+
+           let
+               width = ds.width
+               height = ds.height
+
+               bgshp = ds.bgColor |>
+                       Maybe.map (\x -> [ shapes [ fill (x) ]
+                                  [ rect (0, 0) (toFloat width) (toFloat height) ] ])
+                       |> Maybe.withDefault []
+
+           in         
+       pxScale (width , height) >> toRenderableAll >>
+       (\rls ->
+
+           Canvas.toHtml (width, height) 
+               [ ]
+               ([clear ( 0, 0 ) (toFloat width) (toFloat height)] ++ 
+               (List.append
+                    bgshp
+                   (
+                     rls
+                   ))              )  
+        )
+    )

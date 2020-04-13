@@ -21,31 +21,6 @@ import Set
 
 import Combinatorics exposing (..)
 
-type alias Args = (Int -> Float)
-type alias Env = (Int -> Float)    
-
-
-type alias Trans = {
-           contr : Env -> Env ,
-           cov : Env -> Env    
-        }
-
-
-    
-type alias Conv x =
-                {
-                  act : Trans -> x -> x ,
-                  ap : (Env -> Float) ->
-                         ((Args -> x) -> (Args -> x))   
-                }
-
-
-
-
-
-type alias Sqr = List (Float , Float)
-    
-type alias Sqrs = List Sqr
 
 type alias Cell = Piece -> CSet
     
@@ -73,8 +48,10 @@ type alias CubAA = PCubA SubFace ( DCtx , Int , List I.Term )
 type alias CubAB = PCubA SubFace ( Cell )     
 
 type alias CubAC a = PCubA SubFace ( a )
+    
+-- type alias CubAC a = PCubA SubFace ( a )
 
-type alias CubBB a = PCubB Face ( a , Bool )
+type alias CubBB a = PCubB Face ( a )
 -- bool here means it is "filled" , true, means that cell was missing and was filled
 
     
@@ -92,7 +69,8 @@ type alias Inside = List Bool -> Int
 -- nth Bool in subset regards nth Variable, subset is specyfing corners, afer chaing permutation,
 -- meaning behind subset is NOT changing
 -- meaning of permutation : if you act permutation on Range 0 (dim -1) ,
--- you will get sorted variables in ASCENDING order! , (meaning distance from the "point" to face)
+-- you will get sorted (by Value , not index of variable!) variables in ASCENDING order! , (meaning distance from the "point" to face)
+-- IMPORTANT! bool convantion can be tricky! see pieceEval why!
 
 -- Boundary - Face
 -- Face (n , false/true) - means nth variable have value of 0/1 
@@ -164,19 +142,6 @@ transA2 ((cdim , cs) , lpib) p =
 
       
              
-interpretExpr : Interpreter a -> (C.CType , I.Term) -> Result String a
-interpretExpr ia = 
-   makeDrawCtx >>
-   Result.andThen(\x ->
-   let n = dimOfCtx (Tuple.second x) in               
-      x               
-      |> mkCubAA
-      |> Result.andThen (pCubMap (transA1 >> Result.map transA2))
-      |> Result.andThen (pCubMap (ia.renderCells n))
-      |> Result.map (ia.fillMissing n)
-      |> Result.map (pCubMap2 (ia.transA3 n) (ia.transA3fill n))   
-      |> Result.map (ia.collectAll n)
-   )
        
 tm2Cub : DCtx -> I.Term -> Maybe (Cell)
 tm2Cub dc tm =
@@ -302,7 +267,7 @@ genCub dc ct =
 
          
 generate : DCtx -> C.CType -> Result String (Maybe (DData , Int -> Int ))
-generate dc ct = 
+generate dc ct =
        (genCub dc ct)
     |> Result.map (       
      Maybe.map (Tuple.mapFirst DSet)       
@@ -442,7 +407,7 @@ degenMissing dim (cl ,  li) p =
 handleProjections : List (Maybe Bool) -> Cell ->  Cell          
 handleProjections lmb cs =
     List.foldr
-        (Maybe.map (\(i , b) -> cellProj i b) >> Maybe.withDefault identity )
+        (Maybe.map (\(i , b) -> cellFace i b) >> Maybe.withDefault identity )
             cs (List.indexedMap (\i -> Maybe.map (Tuple.pair i) ) lmb)
 
 
@@ -462,8 +427,8 @@ cellBorder cl (i , b) p =
         CPoint x -> CPoint x
                     
                 
-cellProj : Int -> Bool -> Cell -> Cell 
-cellProj i b ce = cellBorder ce (i , b)
+cellFace : Int -> Bool -> Cell -> Cell 
+cellFace i b ce = cellBorder ce (i , b)
 
 cellFlip : Int -> Cell -> Cell                  
 cellFlip i cl p =
@@ -551,6 +516,102 @@ mkCubAA (tm , dc) =
 
 -- = PCubA x | HcompA (y -> PCubA y x) (PCubA y x)
 
+
+fixVarIndex : SubFace -> Int -> Int
+fixVarIndex sf =
+    subFaceLI.toL sf |> List.indexedMap (\j -> Maybe.map (const j))
+    |> List.filterMap (identity) |>  List.foldr (\k -> precompose (punchOut k)) identity
+    
+-- first argument here descirbes dimension of output! (dim of input is n + 1)
+pCubABproj : Int -> Face -> CubAB -> CubAB
+pCubABproj n f cu =
+    let (i , b) = f in
+    case (n , cu) of
+        (_ , PCubA x)
+            -> PCubA (cellBorder x f)
+        (_ , HcompA si bot)
+            ->
+                (si (faceToSubFace (n + 1) f ))
+                |> Maybe.map (pCubABproj n (n , True))    
+                |> Maybe.withDefault (
+
+
+
+                     HcompA
+                    (\sf ->
+                     let
+                         sfD = subFaceDeg i sf
+                         i2D = fixVarIndex sfD i 
+                         n2 = n + 1 - ((subFaceLI.toL) sf |> List.filterMap identity |> List.length)
+                     in    
+                     sfD
+                     |> si
+                     |> Maybe.map (
+
+                                   pCubABproj n2 (i2D , b)
+
+                                        >> Just
+                                
+                                  )
+                     -- Nothing    
+                     |> Maybe.withDefault (
+                               subFaceInj f sf
+                              |> si
+                                     
+                                          )    
+                      )
+                    (pCubABproj n f bot)
+              )    
+
+-- first argument here descirbes dimension of input! (dim of output is n - 1)              
+fillMissing : Int -> CubAB -> CubBB Cell
+fillMissing n cab =
+    case cab of
+        PCubA x -> (PCubB x)
+        HcompA si bot
+            ->  let fMCenter = (fillMissing n bot) 
+
+                in HcompB
+                    
+                   (\f ->
+                    (si (faceToSubFace n f) |> Maybe.map (fillMissing n))     
+                    |> Maybe.withDefault    
+                       ((fillMissing (n - 1) (pCubABproj (n - 1) f (HcompA si bot) )))
+
+                    )
+                   fMCenter
+                       
+-- first argument here descirbes dimension of input! (dim of output is n - 1) 
+fillMissingA : Int -> CubAB -> CubAB
+fillMissingA n cab =
+    case cab of
+        PCubA x -> (PCubA x)
+        HcompA si bot
+            ->  let fMCenter = (fillMissing n bot)
+                    fMCenterA = (fillMissingA n bot)            
+                    misFaces = (\f ->
+                         (si (faceToSubFace n f) |> Maybe.map (fillMissingA n))     
+                         |> Maybe.withDefault
+                                       
+                            ((fillMissingA (n - 1) (pCubABproj (n - 1) f (HcompA si bot) )))
+                         )
+                in HcompA
+                    (\sf ->
+                        if (getSubFaceCoDim sf == 1) 
+                        then (toFace sf |> Maybe.map (misFaces))
+                        else si sf 
+                       
+                         )
+                   fMCenterA
+                       
+pCubMapA : (y -> z) -> PCubA x y -> (PCubA x z)
+pCubMapA f pcb = 
+    case pcb of
+        PCubA x -> x |> f |> PCubA
+        HcompA si bot
+            ->  pCubMapA f bot
+                |> (HcompA ( si  >> Maybe.map (pCubMapA f)  ))
+                       
 pCubMap : (y -> Result String z) -> PCubA x y -> Result String (PCubA x z)
 pCubMap f pca =
     case pca of
@@ -571,6 +632,14 @@ pCubMapB f pcb =
             ->  pCubMapB f bot
                 |> (HcompB (\x -> (si x) |> pCubMapB f  ))
 
+-- pCubMapBR : (y -> Result String z) -> PCubB x y -> Result String (PCubB x z)
+-- pCubMapBR f pcb = 
+--     case pcb of
+--         PCubB x -> x |> f |> Result.map PCubB
+--         HcompB si bot
+--             ->  pCubMapB f bot
+--                 |> (HcompB (\x -> (si x) |> pCubMapB f  ))                   
+
 pCubMapBFace : (x -> x) -> PCubB x y -> PCubB x y
 pCubMapBFace f pcb = 
     case pcb of
@@ -578,7 +647,16 @@ pCubMapBFace f pcb =
         HcompB si bot
             ->
                 pCubMapBFace f bot
-                |> HcompB ( f >>  si >> (pCubMapBFace f)  )                   
+                |> HcompB ( f >>  si >> (pCubMapBFace f)  )
+
+pCubMapASubFace : (x -> x) -> PCubA x y -> PCubA x y
+pCubMapASubFace f pcb = 
+    case pcb of
+        PCubA x -> PCubA x
+        HcompA si bot
+            ->
+                pCubMapASubFace f bot
+                |> HcompA ( f >> si >> Maybe.map (pCubMapASubFace f)  )                                      
                    
 pCubMap2 : (y -> z) -> (x -> z -> z) -> PCubB x y -> (PCubB x z)
 pCubMap2 f g pcb = 
@@ -587,6 +665,7 @@ pCubMap2 f g pcb =
         HcompB si bot
             ->  pCubMap2 f g bot
                 |> (HcompB (\x -> (si x) |> pCubMap2 f g |> pCubMapB (g x) ))
+
 
 emptyCtx : DCtx
 emptyCtx = {list = [], uniqs = const 0 , bounds = Dict.empty }           
@@ -699,18 +778,17 @@ pieceEval dc tm0 pc =
 
    let
        (crn , prm) = pc |> (isoPiece |> Tuple.second)
-                     -- |> \(c , p) -> (log
-                     --     ("kolejnosc:" 
-                     --    ++ (
-                     --     ( subsetLI.toL c |> List.map (boolElim "F" "T") |> String.join ",")
-                     --     ++ "  " ++ ((toUsual p) |> List.map (String.fromInt) |> String.join ",")
-                     --    )) (c , p)) 
-       
+                     
+
+
+                 -- careful with convention! (i , False) , means that (1 - x_i) , without
+                 -- inverting below, nth bool would have meining of oposite side!
        compArr : List (Int , Bool)
        compArr =
-           let ca = permuteList prm ( List.indexedMap (Tuple.pair) (subsetLI.toL crn)) 
+           let ca = permuteList prm ( List.indexedMap (Tuple.pair) (subsetLI.toL crn))
+                      |> List.map (Tuple.mapSecond not)
            in ca ++ (List.reverse (List.map (Tuple.mapSecond not) ca))
-              -- |> log "compArr"
+              
 
 
        peSortVia : List (Int , Bool) ->  (Int , Bool) -> (Int , Bool) -> Bool
@@ -778,18 +856,11 @@ pieceEval dc tm0 pc =
                                               I.fromBIView (I.JB2 I.Max x (I.JT t2)))
                                           )
                _ -> Nothing
-   -- in (log "start" maybeLoop) evF (log "" tm0) |> log "koniec"        
+
    in maybeLoop evF tm0 
 
 
 -- corners
-
--- getCSetCornerL : (List Bool) -> CSet -> Int
--- getCSetCornerL ss cs =
---     case cs of
---         CSet n bd _ -> todo ""
---         CPoint i -> i
---         Degen k x -> todo ""             
 
 getBoundaryCorner : Subset -> Boundary -> Int
 getBoundaryCorner = subsetLI.toL >> getBoundaryCornerL 
@@ -832,28 +903,40 @@ describeErr s = Result.mapError (\e -> (s ++ " \n" ++ (indent 4 e)) )
 
 type alias Interpreter a = {
           toStr : Int -> a -> String,
-          renderCells : Int ->  Cell -> Result String a,
-          fillMissing : Int -> CubAC a -> CubBB a,
-          transA3 : Int -> (a , Bool) -> (a , Bool),          
-          transA3fill : Int -> Face -> (a , Bool) -> (a , Bool),
-          collectAll : Int -> CubBB a -> a     
+          renderCells : Int ->  Cell ->  a,
+          -- fillMissing : Int -> CubAC a -> CubBB a,
+          collectAll : Int -> CubAC a -> a     
         }
 
 fromNindependent : {
           toStr : a -> String,
-          renderCells : Cell -> Result String a,
-          fillMissing : CubAC a -> CubBB a,
-          transA3 : (a , Bool) -> (a , Bool),          
-          transA3fill : Face -> (a , Bool) -> (a , Bool),
-          collectAll : CubBB a -> a     
+          renderCells : Cell ->  a,
+          -- fillMissing : CubAC a -> CubBB a,
+          collectAll : CubAC a -> a     
         } -> Interpreter a
     
 fromNindependent x =
        {
           toStr = const x.toStr,
           renderCells = const x.renderCells ,
-          fillMissing = const x.fillMissing ,
-          transA3 = const x.transA3,          
-          transA3fill = const x.transA3fill,
+          -- fillMissing = const x.fillMissing ,
           collectAll = const x.collectAll     
         }
+
+
+
+              
+interpretExpr : Interpreter a -> (C.CType , I.Term) -> Result String a
+interpretExpr ia = 
+   makeDrawCtx >>
+   Result.andThen(\x ->
+   let n = dimOfCtx (Tuple.second x) in               
+      x               
+      |> mkCubAA
+      |> Result.andThen (pCubMap (transA1 >> Result.map transA2))
+      |> Result.map (fillMissingA n)
+      |> Result.map (pCubMapA ( ia.renderCells n
+                                   ))        
+      |> Result.map (ia.collectAll n)
+   )
+           

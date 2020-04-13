@@ -1,4 +1,4 @@
-module MicroAgda.Internal.Translate exposing
+module MicroAgda.Internal.TranslatePretty exposing
     ( .. )
 
 import Debug exposing (..)
@@ -12,6 +12,7 @@ import MicroAgda.Internal.Term as I
 import MicroAgda.Raw as R
 import MicroAgda.Internal.Ctx as C
 import MicroAgda.StringTools exposing (..)
+import MicroAgda.TypeChecker as TC exposing (..)
 
 import ResultExtra exposing (..)
 
@@ -25,12 +26,30 @@ foldInternalApp c bnd = List.foldl (I.elimArg >> (internal2raw c bnd) >> (swap R
 newName : List String -> String ->  String 
 newName ls s = makeFresh s (Set.fromList ls)                        
 
+
+pretty : C.Ctx -> List String -> I.Term -> Maybe R.Raw
+pretty c bnd t =
+    (C.arity (C.CT t))
+   |> Maybe.andThen (\arr ->     
+        let faces = List.range 0 ((2 * arr) - 1)
+                    |> List.map (\x -> (x//2 , (modBy 2 x == 1) ))
+                    |> mapListResult (cuTyFace c (C.CT t) >> Result.map (internal2raw c bnd))
+                    
+            head = lookByIntInList ["_≡_" , "Sq" , "Cu"] (arr - 1)
+
+        in case (head , faces) of
+               (Just h , Ok fcs) -> Just (List.foldl (\x -> \rt -> R.App rt x) (R.Var h) fcs) 
+               (_) -> Nothing
+                         
+   )
+    
 internal2raw : C.Ctx -> List String -> I.Term -> R.Raw
 internal2raw c bnd t =
+   pretty c bnd t |> Maybe.withDefault ( 
    case t of
        I.Pi dt at -> let nn = newName bnd at.absName in
                       R.Pi (nn) (internal2raw c bnd (dt.unDom))
-                       (internal2raw c (nn :: bnd) (at.unAbs)) 
+                       (internal2raw c (nn :: bnd) (at.unAbs))                           
        I.Lam ai at ->
            let nn = newName bnd at.absName  in
            R.Lam (nn) (internal2raw c (nn :: bnd) (at.unAbs)) 
@@ -70,7 +89,7 @@ internal2raw c bnd t =
                (R.Var (I.buildInToken2String bi))
                    ee
        I.Star -> R.Var "TypeInf"
-                 
+     )                 
 
 ct2str : C.Ctx -> C.CType -> String                  
 ct2str c = C.toTm >> (internal2raw c []) >> R.raw2String

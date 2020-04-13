@@ -524,6 +524,7 @@ ifErr spare def =
         Err e -> spare
                  
 type alias PiData = ((Dom Type) , (Abs Type))
+type alias PathData = (Term , Term )    
                  
 type Term =
  Pi (Dom Type) (Abs Type)
@@ -540,9 +541,20 @@ toPiData t =
         Pi x y -> Just (x , y)
         Def (BuildIn PathP) (_ :: a :: a0 :: a1 :: []) ->
             mkApp (elimArg a) (Var 0 [])
-            |> Result.map (\q -> ( toDom mkInterval , (yesAbs "i" q)))
+            |> Result.map (\q -> ( toDom mkInterval , (yesAbs "iii" q)))
             |> Result.toMaybe    
-        _ -> Nothing 
+        _ -> Nothing
+
+toPathData : Term -> Maybe PathData
+toPathData t =
+    case t of
+        Def (BuildIn PathP) (_ :: a :: a0 :: a1 :: []) ->
+            mkApp (elimArg a) (Var 0 [])
+            |> Result.map (\q ->
+                   (elimArg a0 , elimArg a1))
+            |> Result.toMaybe  
+             
+        _ -> Nothing                          
 
 toIsOne : Term -> Maybe Term
 toIsOne t =
@@ -568,6 +580,18 @@ elimArg e = case e of
 type alias Elims = List (Elim Term)
     
 
+getTail : Term -> Elims
+getTail tm =
+    case tm of
+           LamP pcs ee -> ee
+           Lam ai b -> []         
+           Var i ee -> ee
+           Def (FromContext j) ee -> ee
+           Def (BuildIn bi) ee -> ee
+           Pi _ _ -> []
+           Star -> []  
+
+    
     
 subTerms : Term -> List Term 
 subTerms t =
@@ -620,21 +644,44 @@ mkPartial fTm bTm =
     subFace fTm  
     |> List.map (\x -> partialCase x bTm)
     |> partialCases |> (\x -> LamP x [])   
+
+
+pathAppElim : Term -> (Result String Term)
+pathAppElim tm =
+    getTail tm
+    |> pathAppElimInElims
+    |> Maybe.withDefault (Ok tm)   
+
+pathAppElimInElims : Elims -> Maybe (Result String Term)
+pathAppElimInElims es =
+    case es of
+        IApply e0 e1 (Def (BuildIn pe) []) :: rest ->
+            case pe of
+                I0 -> Just (nfApp e0 rest) 
+                I1 -> Just (nfApp e1 rest)
+                _ -> pathAppElimInElims rest
+        _ :: rest -> pathAppElimInElims rest             
+        _ -> Nothing
+
+
              
 nfApp : Term -> Elims -> Result String Term
 nfApp h t =
-    case h of
-        LamP pcs ee -> lamP pcs (List.append ee t)
-        Lam ai b -> case t of
-                        [] -> Ok (Lam ai b)
-                        x :: xs ->
-                            absApply b (elimArg x)
-                          |> Result.andThen (\y -> nfApp y xs)         
-        Var i ee -> Ok (Var i (List.append ee t))
-        Def (FromContext j) ee -> Ok (Def (FromContext j) (List.append ee t))
-        Def (BuildIn bi) ee -> Ok (nfBI bi (List.append ee t))
-        Pi _ _ -> Err "Pi in Head"
-        Star -> Err "Star in Head"       
+    (pathAppElimInElims t)
+        -- Nothing
+    |> Maybe.withDefault (
+       case h of
+           LamP pcs ee -> lamP pcs (List.append ee t)
+           Lam ai b -> case t of
+                           [] -> Ok (Lam ai b)
+                           x :: xs ->
+                               absApply b (elimArg x)
+                             |> Result.andThen (\y -> nfApp y xs)         
+           Var i ee -> Ok (Var i (List.append ee t))
+           Def (FromContext j) ee -> Ok (Def (FromContext j) (List.append ee t))
+           Def (BuildIn bi) ee -> Ok (nfBI bi (List.append ee t))
+           Pi _ _ -> Err "Pi in Head"
+           Star -> Err "Star in Head" )       
 
 liftTermIns : Int -> (Int -> Int) -> Term -> Term
 liftTermIns b f x =
@@ -704,6 +751,8 @@ toHcompCases ltm =
                   Just (bo.absName , pcs)
                _ -> Nothing       
        _ -> Nothing
+
+            
             
 -- TODO : shadowoanie nazw argumentow 
 substAbs : Int -> Term -> ArgInfo -> Abs Term -> Result String (Abs Term)
@@ -829,7 +878,7 @@ lamP x y =
        
 subst : Int -> Term -> Term -> Result String Term
 subst i x e =
-    case e of
+    (case e of
         LamP pcs ee -> (substPartialCases i x pcs , (substElims i x ee) )
                     |> thenPairResult (\pcsS -> \ eeS -> lamP pcsS eeS)
         Lam ai b ->  (substAbs i x ai b) |> Result.map (Lam ai)          
@@ -844,12 +893,12 @@ subst i x e =
                      _ -> Err "Some err in subst - Pi"
                                       
         Star -> Ok Star
-
+    ) |> Result.andThen pathAppElim
                 
 -- it can be used only with terms without free variables (as secound argument)
 substIC : Int -> Term -> Term -> Result String Term
 substIC i x e =
-    case e of
+    (case e of
         LamP pcs ee -> (substPartialCasesIC i x pcs , (substElimsIC i x ee) )
                     |> thenPairResult (\pcsS -> \ eeS -> lamP pcsS eeS)
         Lam ai b ->  (absMapResult (substIC i x) b) |> Result.map (Lam ai)          
@@ -866,11 +915,13 @@ substIC i x e =
                      (Ok tdd , Ok tbb) -> Ok (Pi tdd tbb )
                      _ -> Err "Some err in subst - Pi"
                                       
-        Star -> Ok Star
+        Star -> Ok Star)
+        |> Result.andThen pathAppElim
 
+-- those two verions are used in Ctx.elm, and there is jsutification for them           
 substIC2 : Int -> Term -> Term -> Result String Term
 substIC2 i x e =
-    case e of
+    (case e of
         LamP pcs ee -> (substPartialCasesIC2 i x pcs , (substElimsIC2 i x ee) )
                     |> thenPairResult (\pcsS -> \ eeS -> lamP pcsS eeS)
         Lam ai b ->  (absMapResult (substIC2 i x) b) |> Result.map (Lam ai)          
@@ -885,8 +936,12 @@ substIC2 i x e =
                      (Ok tdd , Ok tbb) -> Ok (Pi tdd tbb )
                      _ -> Err "Some err in subst - Pi"
                                       
-        Star -> Ok Star
-                
+        Star -> Ok Star)
+        |> Result.andThen pathAppElim
+
+mkPathApp :  (Term , Term) -> Term -> Term -> Result String Term
+mkPathApp (e0 , e1) f a = nfApp f [ IApply e0 e1 a ]  
+    
 mkApp : Term -> Term -> Result String Term         
 mkApp f a = nfApp f [Apply {unArg = a , argInfo = AI.default } ]
 
@@ -923,7 +978,14 @@ mkInterval = buildIn Interval
              
 mkIEnd : Bool -> Term 
 mkIEnd b = if b then (buildIn I1) else (buildIn I0)
-           
+
+toIEnd : Term -> Maybe Bool
+toIEnd tm =
+    case tm of
+        Def (BuildIn I0) [] -> Just False
+        Def (BuildIn I1) [] -> Just True                       
+        _ -> Nothing
+         
 elimsBetaEq : Elims -> Elims -> Bool 
 elimsBetaEq es1 es2 =
     case (es1 , es2) of

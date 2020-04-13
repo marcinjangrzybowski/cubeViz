@@ -1,8 +1,8 @@
 module MicroAgda.TypeChecker exposing (..)
 
 import MicroAgda.Raw as R exposing (Raw)
-import MicroAgda.Internal.Term exposing (..)
-import MicroAgda.Internal.Ctx exposing (..)
+import MicroAgda.Internal.Term as I exposing (..)
+import MicroAgda.Internal.Ctx as C exposing (..)
 import MicroAgda.Internal.Translate exposing (..)
 
 import ResultExtra exposing (..)
@@ -15,6 +15,12 @@ import Dict as Dict
 
 import Debug exposing (todo , log)
 
+import MicroAgda.StringTools exposing (..)
+
+import Combinatorics as CMB
+
+describeErr : String -> Result String x -> Result String x
+describeErr s = Result.mapError (\e -> (s ++ " \n" ++ (indent 4 e)) )              
 
 notEqMsg : Ctx -> CType -> CType -> String
 notEqMsg c tyExpected tySpotted =
@@ -50,6 +56,8 @@ onlyCheckResult f = Result.andThen (\a -> (f a) |> Result.map (\_ -> a))
                  
 checkIfPi : e -> Result e (a , CType) -> Result e (a , PiData) 
 checkIfPi e =  Result.map (Tuple.mapSecond (toTm >> toPiData)) >> resMaybePopOut e
+
+               
 
 --use only after scope check!               
 checkAgainstInterval : Ctx -> Raw -> Result String Term  
@@ -235,9 +243,13 @@ resTuple x =
 afterScopeCheckTCapp : Ctx -> Raw -> (Term , CType)  -> Result String (Term , CType)
 afterScopeCheckTCapp c r tt =
     checkIfPi ("Not a Function Type") (Ok tt)
-   |> Result.andThen (\(tm , (dd , bd)) -> 
-   (afterScopeCheckTC c (CT dd.unDom) r                               
-   |> Result.andThen (tupleMapBoth2 ((mkApp tm) , piApp (dd , bd))
+   |> Result.andThen (\(tm , (dd , bd)) ->
+      let appFn = toPathData (Tuple.second tt |> toTm)
+                  |> Maybe.map (mkPathApp)
+                  |> Maybe.withDefault mkApp 
+      in                    
+             (afterScopeCheckTC c (CT dd.unDom) r                               
+          |> Result.andThen (tupleMapBoth2 ((appFn tm) , piApp (dd , bd))
                           >> (Tuple.mapSecond (Result.map CT))
                           >> resTuple)))  
 
@@ -284,3 +296,53 @@ unTelescope = List.foldr
                   
 
                   
+
+
+
+cuTyFace : C.Ctx -> C.CType -> CMB.Face -> Result String (I.Term)
+cuTyFace c ct (i , b) = 
+    C.arity ct |> Result.fromMaybe "arity not detteceted"    
+            |> Result.andThen (\na ->    
+               if (na <= i)
+               then (Err "face index to big for this arity")
+               else (
+                 let  c2 = (C.extend c "cuTyFaceTemp" ct)
+                      (c3 , dimNames) = C.extendInth (na - 1) c2
+                 in getBaseType ct
+                    |> Result.andThen (\bct ->
+                         let rtm =
+                                   dimNames |> listInsert i (choose b "i0" "i1")            
+                                  |> List.foldl (\name -> \rawTerm ->
+                                                   R.App (rawTerm) (R.Var name)  )
+                                                   (R.Var ("cuTyFaceTemp"))
+                                  -- |> swapFn (List.foldr (\name -> \rawTerm ->
+                                  --                  R.Lam name (rawTerm)  ))
+                                  --                  dimNames        
+                         in tC
+                                  (c3)
+                                  (bct)
+                                  rtm
+                                  |> Result.map (\ftm -> unTelescope (c3 , ftm) dimNames)
+                                  |> Result.map (Tuple.second)         
+                                  |> describeErr ("tc er : ")                  
+
+                    )
+               )   
+                 
+             )
+            |> describeErr ("cuTyFace : ")
+                  
+
+getBaseType : C.CType -> Result String C.CType
+getBaseType ct =
+    C.arity ct |> Result.fromMaybe "arity not detteceted"
+       |> Result.andThen (\art ->    
+              case (I.tmBIView (C.toTm ct) , art) of
+                  ((I.JB4 I.PathP _ (I.JT (pth)) (I.JT (end0)) (I.JT (end1))) , 1)
+                      -> I.mkApp pth (I.mkIEnd True) |> Result.map C.CT
+                  ((I.JB4 I.PathP _ (I.JT (pth)) (I.JT (end0)) (I.JT (end1))) , k)
+                      -> I.mkApp pth (I.mkIEnd True)
+                         |> Result.map C.CT
+                         |> Result.andThen getBaseType
+                  (_ , _ ) -> Err ("not a path type! (" ++ (String.fromInt art) ++ ")")         
+                 ) |> describeErr ("getBaseType : ")

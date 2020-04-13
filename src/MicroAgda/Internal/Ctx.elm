@@ -76,7 +76,13 @@ lookNameByInt : Ctx -> Int -> Maybe String
 lookNameByInt c i = lookByIntInList (List.reverse (ctxToList c)) i |> Maybe.map (Tuple.first)                
 ctxPreview = ctxToList >> List.map Tuple.first >> List.reverse >> absPreview                
 
-    
+extendInth : Int -> Ctx -> (Ctx , List String) 
+extendInth k c =
+    let ss = c |> symbolsSet |> Set.union buildInNamesSet
+        names = makeFreshList (padRight k "i" (String.split "" "ijkl")) ss
+    in
+    List.foldl (\name -> (swapFn (swapFn extend name) (CT mkInterval)) ) c names
+    |> pairR names        
                        
 extend : Ctx -> String -> CType -> Ctx
 extend c s cty = listToCtxFull (((s , cty) , Nothing) :: (ctxToListFull c) )         
@@ -140,3 +146,17 @@ substInCtx2 (c , t) i (x , ct) =
                         )
                         
                    else (Err "Wrong type while substituting")                           
+
+arity : CType -> Maybe Int
+arity x =
+    case (toPiData (toTm x)) of
+        Just (do , cod) ->
+            case (do.unDom , cod.unAbs) of
+                 ((Def (BuildIn Interval) []) , y) -> (arity (CT y))
+                                                            |> (Maybe.map (\z -> z + 1))
+                 _ -> Nothing   
+        Nothing -> case toTm x of
+                       (Def (FromContext _) []) -> Just 0
+                       (Var _ []) -> Just 0                                
+                       _ -> Nothing
+                       

@@ -2,10 +2,14 @@ module ResultExtra exposing (..)
 
 import Result exposing (..)
 
+import Either exposing (..)
+
 import Set
 
 import Dict
 
+import Html.Styled exposing (..)
+import Html.Styled.Lazy exposing (..)
 
 import Debug exposing (..)
 
@@ -22,6 +26,15 @@ thenPairResult f rab =
 mapPairResult : (a -> b -> c) -> (Result e a , Result e b)  ->  Result e c
 mapPairResult f = thenPairResult (\x -> \y -> Ok (f x y))
 
+
+
+
+errHtml : Result String (Html msg) -> Html msg
+errHtml = convergeResult (text >> List.singleton >> div []) identity
+
+lazyResHtml : (a -> Result String (Html msg)) -> a -> Html msg
+lazyResHtml f a = lazy (f >> errHtml) a           
+             
 maybeMixRes : Maybe (Result e x) -> Result e (Maybe x)                  
 maybeMixRes = Maybe.map (Result.map Just) >>  Maybe.withDefault (Ok Nothing)
 
@@ -138,6 +151,9 @@ mapFoldSafe f1 f1fail f2 f3 v0 =
              >> Result.map (Tuple.mapSecond List.reverse)
              >> Result.mapError List.reverse            
 
+maybeMerge : Maybe (Maybe a) -> Maybe a
+maybeMerge = Maybe.withDefault Nothing
+    
 maybeLoop : (a -> Maybe a) -> a -> a                 
 maybeLoop f a =
     f a |> Maybe.map (maybeLoop f) |> Maybe.withDefault a  
@@ -189,8 +205,26 @@ listInsert i a l =
        0 -> a :: l
        _ -> case l of
                 [] -> a :: []
-                x :: xs -> x :: (listInsert (i - 1) a xs)       
+                x :: xs -> x :: (listInsert (i - 1) a xs)
 
+
+swapHeadWithIth : Int -> List a -> List a
+swapHeadWithIth k l =
+    lookByIntInList l k
+    |> (lookByIntInList l 0    
+    |> Maybe.map2 (\h -> \x -> l |> updateInList k h |> updateInList 0 x ))
+    |> Maybe.withDefault l
+
+swapLastWithIth : Int -> List a -> List a
+swapLastWithIth k l =
+    let j = (List.length l - 1) in
+    
+    lookByIntInList l k
+    |> (lookByIntInList l j    
+    |> Maybe.map2 (\h -> \x -> l |> updateInList k h |> updateInList j x ))
+    |> Maybe.withDefault l          
+            
+                           
 apply : (a -> b) -> a -> b
 apply f g = f g        
 
@@ -199,6 +233,12 @@ applyTo g f = f g
 
 bool2Mb : Bool -> Maybe ()
 bool2Mb b = choose b Nothing  (Just ())
+
+mb2Bool : Maybe a -> Bool
+mb2Bool m = 
+    case m of
+        Nothing -> False
+        _ -> True           
     
 mbSwap : List Int -> Maybe (Int , Int)
 mbSwap l0 =
@@ -242,6 +282,9 @@ sortListTest = maybeLoop (\l -> mbSwap l |> Maybe.map swapList |> Maybe.map (app
 
 succ : Int -> Int        
 succ i = i + 1
+
+predd : Int -> Int        
+predd i = i - 1         
 
 zip : (List a , List b) -> List (a , b)         
 zip (la , lb) =
@@ -333,6 +376,8 @@ uncurry f ( a, b ) =
 swap : (a -> b -> c) -> b -> a -> c
 swap f b a = f a b        
 
+swapFn = swap
+             
 funStich : (a -> c) -> (c -> a -> b)  -> a -> b 
 funStich g f a = f (g a) a                
 
@@ -341,3 +386,61 @@ kvListToStr fk fv =
     List.map (\(i , v) -> ((fk i) ++ " : " ++ (fv v)))
    >> String.join ("\n")
                  
+iter : (a -> a) -> a -> Int -> a
+iter f a n =
+    case n of
+        0 -> a
+        _ -> f (iter f a (n - 1) )     
+
+oddQ : Int -> Bool
+oddQ x = (modBy 2 x == 1)              
+
+listTuples : List a -> List (a , a)             
+listTuples =
+    pairFrom
+    (List.drop 1)
+    (List.reverse >> (List.drop 1) >> List.reverse)
+    >> zip    
+
+b2f : Bool -> Float
+b2f = boolElim 0.0 1.0      
+
+
+cumulStep : (a -> Result e b) -> Result e a -> (Result e (a , b))
+cumulStep f ra =
+    ra |> Result.andThen (\a -> f a |> Result.map (Tuple.pair a))
+
+
+mapCast : (a -> Maybe b) -> List a -> List (Either b a)        
+mapCast f = List.map (\a -> f a |> Maybe.map (Left) |> Maybe.withDefault (Right a))
+
+pairPick : (a , a) -> Bool -> a                     
+pairPick = uncurry boolElim
+
+           
+allSame : List Int -> Bool
+allSame =
+    Set.fromList >> Set.toList >> List.length >>
+     (\n -> n <= 1)
+                
+padRight : Int -> x -> List x -> List x
+padRight n x l =
+    case (compare n (List.length l)) of
+       EQ -> l
+       LT -> List.take n l
+       GT -> l ++ (List.repeat (n - (List.length l)) x)       
+
+             
+interp : Float -> Float -> Float -> Float
+interp x0 x1 t = x0 * (1 - t) + (x1 * t)
+
+gatherByInt : (a -> Int) -> List a -> List (Int , List a)
+gatherByInt f =
+    List.foldl (\a ->
+                 let i = f a
+                 in Dict.update i 
+                      (Maybe.map (\l -> l ++ [a])
+                      >> Maybe.withDefault ([a])
+                      >> Just) 
+               ) Dict.empty
+    >> Dict.toList          

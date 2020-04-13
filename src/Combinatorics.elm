@@ -37,6 +37,8 @@ type SubFace = SubFace Int Int
 
 type Piece = Piece Int Int Int   
 
+type Zone = Zone Int Int Int Int
+    
 type Word = Word Int Int Int
 
 type alias Face = (Int , Bool)
@@ -171,10 +173,13 @@ makeFnLI li =
     List.map (Tuple.mapFirst li.toI)
     >> Dict.fromList >> (swap Dict.get)
     >> comp li.toI      
-
+          
+    
 makeFnPiece  : List (Piece , x) -> Piece -> Maybe x
 makeFnPiece = makeFnLI pieceLI
 
+
+              
 makeFnSubFace : List (SubFace , x) -> SubFace -> Maybe x
 makeFnSubFace = makeFnLI subFaceLI
 
@@ -340,9 +345,49 @@ pieceInj i b  =
     let (t , f) = isoPiece
     in f >> (Tuple.mapBoth
                  (mapAsList subsetLI (listInsert i b))
-                 (invPermutation >> toUsual >> ((List.map succ) >> listInsert i 0) >> fromUsual >> invPermutation)
+                 (
+                      invPermutation >>
+                          toUsual
+                      >> ((List.map succ) >> listInsert i 0)
+                      >> fromUsual
+                      >> invPermutation
+                 )
             ) >> t
 
+
+-- face nth dim is incrasng ambient dim of subface (nth -1)        
+subFaceInj : Face -> SubFace -> SubFace  
+subFaceInj (i , b ) sf =
+    sf |> subFaceLI.toL |> listInsert i (Just b) |> subFaceLI.fromL
+
+-- face nth dim is incrasng boath ambient and actual dim of subface        
+        
+subFaceDeg : Int -> SubFace -> SubFace  
+subFaceDeg i sf =
+    sf |> subFaceLI.toL |> listInsert i (Nothing) |> subFaceLI.fromL          
+
+getSubFaceCoDim : SubFace -> Int
+getSubFaceCoDim = subFaceLI.toL >> List.filter (mb2Bool) >> List.length
+
+getSubFaceDim : SubFace -> Int
+getSubFaceDim = subFaceLI.toL >> List.filter (mb2Bool >> not) >> List.length                  
+
+toFace : SubFace -> Maybe Face
+toFace sf = 
+    if (getSubFaceCoDim sf == 1)
+    then (sf |> subFaceLI.toL |> List.indexedMap (Tuple.pair >> Maybe.map )
+         |> List.filterMap identity |> List.head)
+    else Nothing
+
+toFaceForce : SubFace -> Maybe Face
+toFaceForce sf = 
+   (sf |> subFaceLI.toL |> List.indexedMap (Tuple.pair >> Maybe.map )
+         |> List.filterMap identity |> List.head)        
+
+toSubFaceRest : SubFace -> List (Int , Bool)
+toSubFaceRest sf = (sf |> subFaceLI.toL |> List.indexedMap (Tuple.pair >> Maybe.map )
+         |> List.filterMap identity |> List.drop 1)
+                
 pieceFlip : Int -> Piece -> Piece
 pieceFlip i  =
     let (t , f) = isoPiece
@@ -369,7 +414,17 @@ tabulateFaces n f =
    |> List.map
        ((\x -> (x // 2 , modBy 2 x > 0 )) >> doAndPairR f)
 
+tabulateLIMaybe : ListInterpretable a aa -> Int -> (a -> Maybe x) -> (List (a , x))
+tabulateLIMaybe li n f =
+       (\a -> f a |> Maybe.map (Tuple.pair a)) 
+    |> mapAllLI li n
+    |> List.filterMap identity  
+                  
+tabulateSubFaces : Int -> (SubFace -> Maybe x) -> List (SubFace , x)
+tabulateSubFaces = tabulateLIMaybe subFaceLI
 
+
+           
 -- -- untested!           
 -- subFaceToMaybeFace : SubFace -> Maybe Face
 -- subFaceToMaybeFace =
@@ -401,3 +456,34 @@ ambFnOnArr f l =
                    (f (unTabulate x xs ))
                    (range (List.length l))      
                    
+subset1 : Bool -> Subset
+subset1 = boolElim 0 1 >> Subset 1            
+
+rangeFloat : Int -> Float -> Float -> List Float
+rangeFloat n x0 x1 =
+     range (n + 1)
+  |> List.map (toFloat)
+  |> List.map (\x -> x0 + (x1 - x0) * (x / (toFloat n) ))               
+
+
+---- Zone
+
+-- zoneLI : ListInterpretable Zone ((Bool , Int) , (Maybe Bool))  
+-- zoneLI = todo ""
+
+         
+-- isoZone : Iso (Piece , SubFace) Zone
+-- isoZone = todo ""
+
+-- Subface
+
+-- subfaceElim : (Face -> a -> a) -> SubFace -> a -> a
+-- subfaceElim = todo ""              
+
+subFaceCases : SubFace -> Maybe SubFace               
+subFaceCases sf =
+    if ((subFaceLI.toL sf) |> List.filterMap identity |> List.isEmpty)
+    then Nothing
+    else Just sf    
+
+subFaceCenter n = ((List.repeat n Nothing) |> subFaceLI.fromL)        

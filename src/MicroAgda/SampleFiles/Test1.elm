@@ -37,5 +37,11 @@ content = mkFile "test1" [
         ["i", "j" , "k"]
                       "λ l → λ m → λ n → f1 l m n "
            -- "λ l → λ m → λ n → ( ( k ∨ j ) ∨ i ) ∧ ( ~ ( k ∨ ( ~ k ) ∨ k ∨ ( ( ~ m ) ∨ ( ~ ( ~ j ) ) ∧ n ) ∨ k ) ) ∧ ~ (f1 l m n)"
-        []    
+        [] ,
+
+    upc "betaTest" "∀ (l : Level) → ∀ (A B : Type l) → ∀ (f : A → B) → A → B"
+        ["l", "A" , "B" , "f"]
+                      "λ x → f x"
+        []        
+        
      ]
