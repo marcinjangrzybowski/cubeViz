@@ -2,6 +2,9 @@ port module Main exposing (..)
 
 import Browser exposing (Document)
 
+import Browser.Dom exposing (..)
+import Browser.Events as BE
+
 import Css exposing (..)
 
 import Url exposing (..)
@@ -65,6 +68,8 @@ type Msg =
    | ShowDiagram String
    | ExitFullScreen
    | FromWindow (Maybe Address) (Maybe AllWorkType)  
+   | GotNewInspectorSize (Maybe (Float , Float))
+   | UpdateInspectorSize
      
 port setLocHash : String -> Cmd msg
 
@@ -90,13 +95,29 @@ update msg model =
                                , selectedAddress = Nothing
                                , cachedWinWork = Nothing
                                }
-                              , Nothing)
+                              , Just (
+                                       Task.perform identity (Task.succeed UpdateInspectorSize)
+                                     ))
       ExitFullScreen -> ( {model | fullScreenMode = False }
                               , Nothing)
       FromWindow mbAddrs mbCache ->
                            -- let _ = log "xx" mbAddrs in
                            ( {model | selectedAddress = mbAddrs , cachedWinWork = mbCache }
                               , Nothing)
+      UpdateInspectorSize -> (model , Just (
+                                   getElement "inspectorBox"
+                                 |> Task.attempt (
+                                      convergeResult (const (Nothing))
+                                          (\inf ->
+                                               Just (inf.element.width , inf.element.height))
+                                          >> GotNewInspectorSize
+                                                 )
+                                 )  
+                              )  
+      GotNewInspectorSize mbWH ->
+          let insS = log ("mbWH") (mbWH)
+          in
+            ({ model | inspectorSize = mbWH}  , Nothing) 
     ) |> (\(m , c) -> (m , c |> Maybe.withDefault (setLocHash (model2hash m))))
                         
 --          (model , Cmd.none)
@@ -111,7 +132,8 @@ type alias Model = {
                    , fullScreenMode : Bool
                    , selectedAddress : Maybe Address
                    , inspectorModel : InspectorModel
-                   , cachedWinWork : Maybe AllWorkType                   
+                   , cachedWinWork : Maybe AllWorkType
+                   , inspectorSize : Maybe (Float , Float)                  
                    }
 
 model2hash : Model -> String
@@ -132,7 +154,8 @@ init flags =
                , fullScreenMode = False
                , selectedAddress = Nothing
                , inspectorModel = initInspectorModel
-               , cachedWinWork = Nothing                   
+               , cachedWinWork = Nothing
+               , inspectorSize = Nothing                 
              } 
                ,  newHashToCmd flags
                
@@ -146,7 +169,11 @@ newHashToCmd = String.dropLeft 1 >>
           [fName , defName] ->  readFileAndShowTask fName defName
           _ -> Cmd.none                             
     )
-               
+
+
+-- showInspectorTask : String -> Cmd Msg
+-- showInspectorTask = todo ""
+                   
 loadFileTask : UnParsedFile -> Cmd Msg
 loadFileTask upf = Task.perform identity (Task.succeed (LoadFile upf))
 
@@ -165,8 +192,8 @@ readFileAndShowTask fName defName =
                
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none     
-
+  BE.onResize (\_ _ -> UpdateInspectorSize)     
+-- GotNewInspector
 
 
         

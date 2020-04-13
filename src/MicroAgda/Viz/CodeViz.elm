@@ -49,7 +49,10 @@ hoverStyle = [border3 (px 1) solid (rgba 0 0 0 0) , hover [border3 (px 1) solid 
 selectedStyle : Maybe Address -> Address -> List Style              
 selectedStyle mbAddr addr = 
     ((if (mbAddr == Just addr)
-    then [color (rgb 255 0 0)]
+    then [
+     -- color (rgb 255 0 0)
+    -- ,
+     backgroundColor (rgb 220 220 220)]
     else []) ++ [cursor pointer]    
     )
 -- ++ hoverStyle
@@ -183,9 +186,53 @@ genHtml mba dc n tm addr n2 =
            ]
            [txt]
       |> Ok
-       
+
+subWinHead x =
+    h2
+    [css [
+       margin4 (px 0) (px 0) (px 10) (px 0)
+       , padding (px 3) , backgroundColor (rgb 180 180 180)
+       , fontFamily monospace
+       , fontWeight normal
+       , fontSize (px 14)    
+     ]]
+    [text x]       
+
+toolBoxWin : String -> Html a -> Html a
+toolBoxWin title bdy =
+    div [
+      css [
+         border3 ( px 2 )  solid (rgb 200 200 200)
+       , padding (px 0)
+      ]
+    ] [
+         subWinHead title
+         , bdy
+          ]
+             
 codeVizHtml : Maybe Address -> DCtx -> Int -> Cub N2 -> Result String (Html (Maybe Address))
 codeVizHtml mba dc n cn2 =
     stepMap (genHtml mba) (Ok (dc , n , cn2))
     |> Result.map (collectCubHtml mba [])
-    |> Result.map (\x -> div [css [fontFamily monospace]] [x] )   
+    |> Result.map (\x -> toolBoxWin "normal form"
+                       (
+                         div [css [
+                               fontFamily monospace
+                              , padding (px 4) 
+                              ]] [x]
+                       ) 
+                   )
+                    
+signatureVizHtml : C.CType -> Result String (Html (Maybe Address))
+signatureVizHtml ct =
+       (TP.t2strNoCtx (C.toTm ct))
+    |> text
+    |> Ok       
+    |> Result.map (\x -> toolBoxWin "type (sginature)"
+                       (
+                         div [css [
+                               fontFamily monospace
+                              , padding (px 4) 
+                              ]] [x]
+                       ) 
+                   )                   

@@ -120,7 +120,7 @@ drawingHTML =
        (\rls ->
 
            Canvas.toHtml (width, height) 
-               [ ]
+               [ style "width" "100%" , style "heigth" "100%" ]
                ([clear ( 0, 0 ) (toFloat width) (toFloat height)] ++ 
                (List.append
                     bgshp
@@ -129,3 +129,5 @@ drawingHTML =
                    ))              )  
         )
     )
+
+    

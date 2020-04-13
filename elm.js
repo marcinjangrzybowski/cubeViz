@@ -5379,21 +5379,47 @@ var $author$project$Main$newHashToCmd = A2(
 		}));
 var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
-		{cachedWinWork: $elm$core$Maybe$Nothing, context: $elm$core$Maybe$Nothing, file: $elm$core$Maybe$Nothing, fullScreenMode: false, inspectorModel: $author$project$MicroAgda$Viz$Gui$initInspectorModel, msg: 'initial msg', selectedAddress: $elm$core$Maybe$Nothing, showName: ''},
+		{cachedWinWork: $elm$core$Maybe$Nothing, context: $elm$core$Maybe$Nothing, file: $elm$core$Maybe$Nothing, fullScreenMode: false, inspectorModel: $author$project$MicroAgda$Viz$Gui$initInspectorModel, inspectorSize: $elm$core$Maybe$Nothing, msg: 'initial msg', selectedAddress: $elm$core$Maybe$Nothing, showName: ''},
 		$author$project$Main$newHashToCmd(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Main$subscriptions = function (model) {
-	return $elm$core$Platform$Sub$none;
+var $author$project$Main$UpdateInspectorSize = {$: 'UpdateInspectorSize'};
+var $elm$browser$Browser$Events$Window = {$: 'Window'};
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$browser$Browser$Events$MySub = F3(
+	function (a, b, c) {
+		return {$: 'MySub', a: a, b: b, c: c};
+	});
+var $elm$browser$Browser$Events$State = F2(
+	function (subs, pids) {
+		return {pids: pids, subs: subs};
+	});
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
+	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
+var $elm$browser$Browser$Events$nodeToKey = function (node) {
+	if (node.$ === 'Document') {
+		return 'd_';
+	} else {
+		return 'w_';
+	}
+};
+var $elm$browser$Browser$Events$addKey = function (sub) {
+	var node = sub.a;
+	var name = sub.b;
+	return _Utils_Tuple2(
+		_Utils_ap(
+			$elm$browser$Browser$Events$nodeToKey(node),
+			name),
+		sub);
 };
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
 		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
 	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$Red = {$: 'Red'};
 var $elm$core$Dict$balance = F5(
 	function (color, key, value, left, right) {
@@ -5498,6 +5524,289 @@ var $elm$core$Dict$insert = F3(
 			return x;
 		}
 	});
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$core$Process$kill = _Scheduler_kill;
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $elm$browser$Browser$Events$Event = F2(
+	function (key, event) {
+		return {event: event, key: key};
+	});
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$browser$Browser$Events$spawn = F3(
+	function (router, key, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var actualNode = function () {
+			if (node.$ === 'Document') {
+				return _Browser_doc;
+			} else {
+				return _Browser_window;
+			}
+		}();
+		return A2(
+			$elm$core$Task$map,
+			function (value) {
+				return _Utils_Tuple2(key, value);
+			},
+			A3(
+				_Browser_on,
+				actualNode,
+				name,
+				function (event) {
+					return A2(
+						$elm$core$Platform$sendToSelf,
+						router,
+						A2($elm$browser$Browser$Events$Event, key, event));
+				}));
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$browser$Browser$Events$onEffects = F3(
+	function (router, subs, state) {
+		var stepRight = F3(
+			function (key, sub, _v6) {
+				var deads = _v6.a;
+				var lives = _v6.b;
+				var news = _v6.c;
+				return _Utils_Tuple3(
+					deads,
+					lives,
+					A2(
+						$elm$core$List$cons,
+						A3($elm$browser$Browser$Events$spawn, router, key, sub),
+						news));
+			});
+		var stepLeft = F3(
+			function (_v4, pid, _v5) {
+				var deads = _v5.a;
+				var lives = _v5.b;
+				var news = _v5.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, pid, deads),
+					lives,
+					news);
+			});
+		var stepBoth = F4(
+			function (key, pid, _v2, _v3) {
+				var deads = _v3.a;
+				var lives = _v3.b;
+				var news = _v3.c;
+				return _Utils_Tuple3(
+					deads,
+					A3($elm$core$Dict$insert, key, pid, lives),
+					news);
+			});
+		var newSubs = A2($elm$core$List$map, $elm$browser$Browser$Events$addKey, subs);
+		var _v0 = A6(
+			$elm$core$Dict$merge,
+			stepLeft,
+			stepBoth,
+			stepRight,
+			state.pids,
+			$elm$core$Dict$fromList(newSubs),
+			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
+		var deadPids = _v0.a;
+		var livePids = _v0.b;
+		var makeNewPids = _v0.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (pids) {
+				return $elm$core$Task$succeed(
+					A2(
+						$elm$browser$Browser$Events$State,
+						newSubs,
+						A2(
+							$elm$core$Dict$union,
+							livePids,
+							$elm$core$Dict$fromList(pids))));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$sequence(makeNewPids);
+				},
+				$elm$core$Task$sequence(
+					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
+	});
+var $elm$core$List$maybeCons = F3(
+	function (f, mx, xs) {
+		var _v0 = f(mx);
+		if (_v0.$ === 'Just') {
+			var x = _v0.a;
+			return A2($elm$core$List$cons, x, xs);
+		} else {
+			return xs;
+		}
+	});
+var $elm$core$List$filterMap = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$List$maybeCons(f),
+			_List_Nil,
+			xs);
+	});
+var $elm$browser$Browser$Events$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var key = _v0.key;
+		var event = _v0.event;
+		var toMessage = function (_v2) {
+			var subKey = _v2.a;
+			var _v3 = _v2.b;
+			var node = _v3.a;
+			var name = _v3.b;
+			var decoder = _v3.c;
+			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
+		};
+		var messages = A2($elm$core$List$filterMap, toMessage, state.subs);
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Platform$sendToApp(router),
+					messages)));
+	});
+var $elm$browser$Browser$Events$subMap = F2(
+	function (func, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var decoder = _v0.c;
+		return A3(
+			$elm$browser$Browser$Events$MySub,
+			node,
+			name,
+			A2($elm$json$Json$Decode$map, func, decoder));
+	});
+_Platform_effectManagers['Browser.Events'] = _Platform_createManager($elm$browser$Browser$Events$init, $elm$browser$Browser$Events$onEffects, $elm$browser$Browser$Events$onSelfMsg, 0, $elm$browser$Browser$Events$subMap);
+var $elm$browser$Browser$Events$subscription = _Platform_leaf('Browser.Events');
+var $elm$browser$Browser$Events$on = F3(
+	function (node, name, decoder) {
+		return $elm$browser$Browser$Events$subscription(
+			A3($elm$browser$Browser$Events$MySub, node, name, decoder));
+	});
+var $elm$browser$Browser$Events$onResize = function (func) {
+	return A3(
+		$elm$browser$Browser$Events$on,
+		$elm$browser$Browser$Events$Window,
+		'resize',
+		A2(
+			$elm$json$Json$Decode$field,
+			'target',
+			A3(
+				$elm$json$Json$Decode$map2,
+				func,
+				A2($elm$json$Json$Decode$field, 'innerWidth', $elm$json$Json$Decode$int),
+				A2($elm$json$Json$Decode$field, 'innerHeight', $elm$json$Json$Decode$int))));
+};
+var $author$project$Main$subscriptions = function (model) {
+	return $elm$browser$Browser$Events$onResize(
+		F2(
+			function (_v0, _v1) {
+				return $author$project$Main$UpdateInspectorSize;
+			}));
+};
 var $elm$core$List$isEmpty = function (xs) {
 	if (!xs.b) {
 		return true;
@@ -5743,7 +6052,6 @@ var $rtfeldman$elm_css$VirtualDom$Styled$accumulateStyledHtml = F2(
 					finalStyles);
 		}
 	});
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Dict$singleton = F2(
 	function (key, value) {
 		return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
@@ -7712,6 +8020,42 @@ var $rtfeldman$elm_css$VirtualDom$Styled$toUnstyled = function (vdom) {
 	}
 };
 var $rtfeldman$elm_css$Html$Styled$toUnstyled = $rtfeldman$elm_css$VirtualDom$Styled$toUnstyled;
+var $author$project$Main$GotNewInspectorSize = function (a) {
+	return {$: 'GotNewInspectorSize', a: a};
+};
+var $elm$core$Task$onError = _Scheduler_onError;
+var $elm$core$Task$attempt = F2(
+	function (resultToMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2(
+					$elm$core$Task$onError,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+						$elm$core$Result$Err),
+					A2(
+						$elm$core$Task$andThen,
+						A2(
+							$elm$core$Basics$composeL,
+							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+							$elm$core$Result$Ok),
+						task))));
+	});
+var $author$project$ResultExtra$const = F2(
+	function (x, _v0) {
+		return x;
+	});
+var $author$project$ResultExtra$convergeResult = F3(
+	function (fa, fb, x) {
+		if (x.$ === 'Err') {
+			var a = x.a;
+			return fa(a);
+		} else {
+			var b = x.a;
+			return fb(b);
+		}
+	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
 		get:
@@ -7743,6 +8087,7 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
+var $elm$browser$Browser$Dom$getElement = _Browser_getElement;
 var $author$project$MicroAgda$File$getFileName = function (_v0) {
 	var n = _v0.a;
 	return n;
@@ -7757,6 +8102,7 @@ var $author$project$Main$loadFileTask = function (upf) {
 		$elm$core$Task$succeed(
 			$author$project$Main$LoadFile(upf)));
 };
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Main$model2hash = function (m) {
 	var _v0 = m.file;
 	if (_v0.$ === 'Just') {
@@ -7782,16 +8128,6 @@ var $elm$core$Result$andThen = F2(
 		} else {
 			var msg = result.a;
 			return $elm$core$Result$Err(msg);
-		}
-	});
-var $author$project$ResultExtra$convergeResult = F3(
-	function (fa, fb, x) {
-		if (x.$ === 'Err') {
-			var a = x.a;
-			return fa(a);
-		} else {
-			var b = x.a;
-			return fb(b);
 		}
 	});
 var $author$project$MicroAgda$File$Definition = function (a) {
@@ -12311,35 +12647,6 @@ var $elm$core$Set$singleton = function (key) {
 	return $elm$core$Set$Set_elm_builtin(
 		A2($elm$core$Dict$singleton, key, _Utils_Tuple0));
 };
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
-var $elm$core$Dict$union = F2(
-	function (t1, t2) {
-		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
-	});
 var $elm$core$Set$union = F2(
 	function (_v0, _v1) {
 		var dict1 = _v0.a;
@@ -13304,18 +13611,6 @@ var $author$project$MicroAgda$Internal$Term$buildInTokensList = _List_fromArray(
 										$author$project$MicroAgda$Internal$Term$notAbs($author$project$MicroAgda$Internal$Term$Star))))))))
 		})
 	]);
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
-};
 var $author$project$MicroAgda$Internal$Term$buildInTokensDict = $elm$core$Dict$fromList($author$project$MicroAgda$Internal$Term$buildInTokensList);
 var $author$project$MicroAgda$Internal$Term$buildInLookup = function (s) {
 	return A2(
@@ -15526,20 +15821,49 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{cachedWinWork: $elm$core$Maybe$Nothing, fullScreenMode: true, selectedAddress: $elm$core$Maybe$Nothing, showName: defName}),
-							$elm$core$Maybe$Nothing);
+							$elm$core$Maybe$Just(
+								A2(
+									$elm$core$Task$perform,
+									$elm$core$Basics$identity,
+									$elm$core$Task$succeed($author$project$Main$UpdateInspectorSize))));
 					case 'ExitFullScreen':
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{fullScreenMode: false}),
 							$elm$core$Maybe$Nothing);
-					default:
+					case 'FromWindow':
 						var mbAddrs = msg.a;
 						var mbCache = msg.b;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{cachedWinWork: mbCache, selectedAddress: mbAddrs}),
+							$elm$core$Maybe$Nothing);
+					case 'UpdateInspectorSize':
+						return _Utils_Tuple2(
+							model,
+							$elm$core$Maybe$Just(
+								A2(
+									$elm$core$Task$attempt,
+									A2(
+										$elm$core$Basics$composeR,
+										A2(
+											$author$project$ResultExtra$convergeResult,
+											$author$project$ResultExtra$const($elm$core$Maybe$Nothing),
+											function (inf) {
+												return $elm$core$Maybe$Just(
+													_Utils_Tuple2(inf.element.width, inf.element.height));
+											}),
+										$author$project$Main$GotNewInspectorSize),
+									$elm$browser$Browser$Dom$getElement('inspectorBox'))));
+					default:
+						var mbWH = msg.a;
+						var insS = A2($elm$core$Debug$log, 'mbWH', mbWH);
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{inspectorSize: mbWH}),
 							$elm$core$Maybe$Nothing);
 				}
 			}());
@@ -15618,24 +15942,6 @@ var $rtfeldman$elm_css$Css$prop1 = F2(
 		return A2($rtfeldman$elm_css$Css$property, key, arg.value);
 	});
 var $rtfeldman$elm_css$Css$cursor = $rtfeldman$elm_css$Css$prop1('cursor');
-var $elm$core$List$maybeCons = F3(
-	function (f, mx, xs) {
-		var _v0 = f(mx);
-		if (_v0.$ === 'Just') {
-			var x = _v0.a;
-			return A2($elm$core$List$cons, x, xs);
-		} else {
-			return xs;
-		}
-	});
-var $elm$core$List$filterMap = F2(
-	function (f, xs) {
-		return A3(
-			$elm$core$List$foldr,
-			$elm$core$List$maybeCons(f),
-			_List_Nil,
-			xs);
-	});
 var $author$project$ResultExtra$pairFrom = F3(
 	function (f, g, a) {
 		return _Utils_Tuple2(
@@ -15888,7 +16194,6 @@ var $author$project$ResultExtra$pairR = F2(
 	function (a, b) {
 		return _Utils_Tuple2(b, a);
 	});
-var $rtfeldman$elm_css$Css$absolute = {position: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'absolute'};
 var $author$project$MicroAgda$Viz$Structures$Cub = F2(
 	function (a, b) {
 		return {$: 'Cub', a: a, b: b};
@@ -15969,10 +16274,6 @@ var $author$project$MicroAgda$Viz$Process$centerTransDrw = F2(
 				$author$project$MicroAgda$Viz$FloatFunctions$centerTransInv(cp)));
 	});
 var $author$project$MicroAgda$Drawing$combineDrawings = $elm$core$List$concat;
-var $author$project$ResultExtra$const = F2(
-	function (x, _v0) {
-		return x;
-	});
 var $author$project$ResultExtra$listInsert = F3(
 	function (i, a, l) {
 		if (!i) {
@@ -19826,8 +20127,8 @@ var $author$project$MicroAgda$Viz$CodeViz$selectEvent = function (adrs) {
 				$elm$core$Maybe$Just(adrs),
 				true)));
 };
-var $rtfeldman$elm_css$Css$color = function (c) {
-	return A2($rtfeldman$elm_css$Css$property, 'color', c.value);
+var $rtfeldman$elm_css$Css$backgroundColor = function (c) {
+	return A2($rtfeldman$elm_css$Css$property, 'background-color', c.value);
 };
 var $rtfeldman$elm_css$Css$cssFunction = F2(
 	function (funcName, args) {
@@ -19858,8 +20159,8 @@ var $author$project$MicroAgda$Viz$CodeViz$selectedStyle = F2(
 				mbAddr,
 				$elm$core$Maybe$Just(addr)) ? _List_fromArray(
 				[
-					$rtfeldman$elm_css$Css$color(
-					A3($rtfeldman$elm_css$Css$rgb, 255, 0, 0))
+					$rtfeldman$elm_css$Css$backgroundColor(
+					A3($rtfeldman$elm_css$Css$rgb, 220, 220, 220))
 				]) : _List_Nil,
 			_List_fromArray(
 				[
@@ -20563,23 +20864,114 @@ var $author$project$MicroAgda$Viz$CodeViz$genHtml = F6(
 					[txt])));
 	});
 var $rtfeldman$elm_css$Css$monospace = {fontFamily: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'monospace'};
+var $rtfeldman$elm_css$Css$padding = $rtfeldman$elm_css$Css$prop1('padding');
+var $rtfeldman$elm_css$Css$prop3 = F4(
+	function (key, argA, argB, argC) {
+		return A2(
+			$rtfeldman$elm_css$Css$property,
+			key,
+			A2(
+				$elm$core$String$join,
+				' ',
+				_List_fromArray(
+					[argA.value, argB.value, argC.value])));
+	});
+var $rtfeldman$elm_css$Css$border3 = $rtfeldman$elm_css$Css$prop3('border');
+var $rtfeldman$elm_css$Css$solid = {borderStyle: $rtfeldman$elm_css$Css$Structure$Compatible, textDecorationStyle: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'solid'};
+var $rtfeldman$elm_css$Css$fontSize = $rtfeldman$elm_css$Css$prop1('font-size');
+var $rtfeldman$elm_css$Css$fontWeight = function (_v0) {
+	var value = _v0.value;
+	return A2($rtfeldman$elm_css$Css$property, 'font-weight', value);
+};
+var $rtfeldman$elm_css$Html$Styled$h2 = $rtfeldman$elm_css$Html$Styled$node('h2');
+var $rtfeldman$elm_css$Css$prop4 = F5(
+	function (key, argA, argB, argC, argD) {
+		return A2(
+			$rtfeldman$elm_css$Css$property,
+			key,
+			A2(
+				$elm$core$String$join,
+				' ',
+				_List_fromArray(
+					[argA.value, argB.value, argC.value, argD.value])));
+	});
+var $rtfeldman$elm_css$Css$margin4 = $rtfeldman$elm_css$Css$prop4('margin');
+var $rtfeldman$elm_css$Css$normal = {featureTagValue: $rtfeldman$elm_css$Css$Structure$Compatible, fontStyle: $rtfeldman$elm_css$Css$Structure$Compatible, fontWeight: $rtfeldman$elm_css$Css$Structure$Compatible, overflowWrap: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'normal', whiteSpace: $rtfeldman$elm_css$Css$Structure$Compatible};
+var $author$project$MicroAgda$Viz$CodeViz$subWinHead = function (x) {
+	return A2(
+		$rtfeldman$elm_css$Html$Styled$h2,
+		_List_fromArray(
+			[
+				$rtfeldman$elm_css$Html$Styled$Attributes$css(
+				_List_fromArray(
+					[
+						A4(
+						$rtfeldman$elm_css$Css$margin4,
+						$rtfeldman$elm_css$Css$px(0),
+						$rtfeldman$elm_css$Css$px(0),
+						$rtfeldman$elm_css$Css$px(10),
+						$rtfeldman$elm_css$Css$px(0)),
+						$rtfeldman$elm_css$Css$padding(
+						$rtfeldman$elm_css$Css$px(3)),
+						$rtfeldman$elm_css$Css$backgroundColor(
+						A3($rtfeldman$elm_css$Css$rgb, 180, 180, 180)),
+						$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace),
+						$rtfeldman$elm_css$Css$fontWeight($rtfeldman$elm_css$Css$normal),
+						$rtfeldman$elm_css$Css$fontSize(
+						$rtfeldman$elm_css$Css$px(14))
+					]))
+			]),
+		_List_fromArray(
+			[
+				$rtfeldman$elm_css$Html$Styled$text(x)
+			]));
+};
+var $author$project$MicroAgda$Viz$CodeViz$toolBoxWin = F2(
+	function (title, bdy) {
+		return A2(
+			$rtfeldman$elm_css$Html$Styled$div,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							A3(
+							$rtfeldman$elm_css$Css$border3,
+							$rtfeldman$elm_css$Css$px(2),
+							$rtfeldman$elm_css$Css$solid,
+							A3($rtfeldman$elm_css$Css$rgb, 200, 200, 200)),
+							$rtfeldman$elm_css$Css$padding(
+							$rtfeldman$elm_css$Css$px(0))
+						]))
+				]),
+			_List_fromArray(
+				[
+					$author$project$MicroAgda$Viz$CodeViz$subWinHead(title),
+					bdy
+				]));
+	});
 var $author$project$MicroAgda$Viz$CodeViz$codeVizHtml = F4(
 	function (mba, dc, n, cn2) {
 		return A2(
 			$elm$core$Result$map,
 			function (x) {
 				return A2(
-					$rtfeldman$elm_css$Html$Styled$div,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace)
-								]))
-						]),
-					_List_fromArray(
-						[x]));
+					$author$project$MicroAgda$Viz$CodeViz$toolBoxWin,
+					'normal form',
+					A2(
+						$rtfeldman$elm_css$Html$Styled$div,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace),
+										$rtfeldman$elm_css$Css$padding(
+										$rtfeldman$elm_css$Css$px(4))
+									]))
+							]),
+						_List_fromArray(
+							[x])));
 			},
 			A2(
 				$elm$core$Result$map,
@@ -20590,63 +20982,203 @@ var $author$project$MicroAgda$Viz$CodeViz$codeVizHtml = F4(
 					$elm$core$Result$Ok(
 						_Utils_Tuple3(dc, n, cn2)))));
 	});
-var $author$project$ResultExtra$errHtml = A2(
-	$author$project$ResultExtra$convergeResult,
-	A2(
-		$elm$core$Basics$composeR,
-		$rtfeldman$elm_css$Html$Styled$text,
-		A2(
-			$elm$core$Basics$composeR,
-			$elm$core$List$singleton,
-			$rtfeldman$elm_css$Html$Styled$div(_List_Nil))),
-	$elm$core$Basics$identity);
-var $rtfeldman$elm_css$Css$backgroundColor = function (c) {
-	return A2($rtfeldman$elm_css$Css$property, 'background-color', c.value);
+var $rtfeldman$elm_css$Css$center = $rtfeldman$elm_css$Css$prop1('center');
+var $rtfeldman$elm_css$Css$textAlign = function (fn) {
+	return A3(
+		$rtfeldman$elm_css$Css$Internal$getOverloadedProperty,
+		'textAlign',
+		'text-align',
+		fn($rtfeldman$elm_css$Css$Internal$lengthForOverloadedProperty));
 };
-var $rtfeldman$elm_css$Css$fixed = {backgroundAttachment: $rtfeldman$elm_css$Css$Structure$Compatible, position: $rtfeldman$elm_css$Css$Structure$Compatible, tableLayout: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'fixed'};
-var $rtfeldman$elm_css$Css$height = $rtfeldman$elm_css$Css$prop1('height');
-var $rtfeldman$elm_css$Css$UnitlessInteger = {$: 'UnitlessInteger'};
-var $rtfeldman$elm_css$Css$int = function (val) {
-	return {
-		fontWeight: $rtfeldman$elm_css$Css$Structure$Compatible,
-		intOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible,
-		lengthOrNumber: $rtfeldman$elm_css$Css$Structure$Compatible,
-		lengthOrNumberOrAutoOrNoneOrContent: $rtfeldman$elm_css$Css$Structure$Compatible,
-		number: $rtfeldman$elm_css$Css$Structure$Compatible,
-		numberOrInfinite: $rtfeldman$elm_css$Css$Structure$Compatible,
-		numericValue: val,
-		unitLabel: '',
-		units: $rtfeldman$elm_css$Css$UnitlessInteger,
-		value: $elm$core$String$fromInt(val)
-	};
-};
-var $rtfeldman$elm_css$Css$left = $rtfeldman$elm_css$Css$prop1('left');
-var $rtfeldman$elm_css$Css$position = $rtfeldman$elm_css$Css$prop1('position');
-var $rtfeldman$elm_css$Css$VwUnits = {$: 'VwUnits'};
-var $rtfeldman$elm_css$Css$vw = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, $rtfeldman$elm_css$Css$VwUnits, 'vw');
-var $rtfeldman$elm_css$Css$width = $rtfeldman$elm_css$Css$prop1('width');
-var $rtfeldman$elm_css$Css$zIndex = $rtfeldman$elm_css$Css$prop1('z-index');
-var $author$project$MicroAgda$Viz$Gui$fullWindow = $rtfeldman$elm_css$Html$Styled$div(
+var $author$project$MicroAgda$Viz$Gui$ctxCellStyle = $rtfeldman$elm_css$Html$Styled$Attributes$css(
 	_List_fromArray(
 		[
-			$rtfeldman$elm_css$Html$Styled$Attributes$css(
-			_List_fromArray(
-				[
-					$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$fixed),
-					$rtfeldman$elm_css$Css$width(
-					$rtfeldman$elm_css$Css$vw(100)),
-					$rtfeldman$elm_css$Css$height(
-					$rtfeldman$elm_css$Css$vw(100)),
-					$rtfeldman$elm_css$Css$top(
-					$rtfeldman$elm_css$Css$px(0)),
-					$rtfeldman$elm_css$Css$left(
-					$rtfeldman$elm_css$Css$px(0)),
-					$rtfeldman$elm_css$Css$zIndex(
-					$rtfeldman$elm_css$Css$int(1000)),
-					$rtfeldman$elm_css$Css$backgroundColor(
-					A3($rtfeldman$elm_css$Css$rgb, 255, 255, 255))
-				]))
+			$rtfeldman$elm_css$Css$display($rtfeldman$elm_css$Css$inlineBlock),
+			$rtfeldman$elm_css$Css$margin(
+			$rtfeldman$elm_css$Css$px(8)),
+			$rtfeldman$elm_css$Css$textAlign($rtfeldman$elm_css$Css$center),
+			$rtfeldman$elm_css$Css$padding(
+			$rtfeldman$elm_css$Css$px(5))
 		]));
+var $author$project$MicroAgda$Viz$Gui$ctxCellsRowStyle = $rtfeldman$elm_css$Html$Styled$Attributes$css(_List_Nil);
+var $author$project$MicroAgda$Viz$Gui$ctxIconSize = 128;
+var $avh4$elm_color$Color$white = A4($avh4$elm_color$Color$RgbaSpace, 255 / 255, 255 / 255, 255 / 255, 1.0);
+var $author$project$Gui$Draw$defaultDrawingHTMLSettings = {
+	bgColor: $elm$core$Maybe$Just($avh4$elm_color$Color$white),
+	height: 1024,
+	width: 1024
+};
+var $author$project$Gui$Draw$defCanvSet = $author$project$Gui$Draw$defaultDrawingHTMLSettings;
+var $author$project$MicroAgda$Viz$Gui$ctxIconS = _Utils_update(
+	$author$project$Gui$Draw$defCanvSet,
+	{height: $author$project$MicroAgda$Viz$Gui$ctxIconSize, width: $author$project$MicroAgda$Viz$Gui$ctxIconSize});
+var $author$project$MicroAgda$Viz$Structures$extendInth = F2(
+	function (k, dc) {
+		var ss = A2(
+			$elm$core$Set$union,
+			$author$project$MicroAgda$Internal$Term$buildInNamesSet,
+			$author$project$MicroAgda$Internal$Ctx$symbolsSet(
+				$author$project$MicroAgda$Viz$Structures$toCtx(dc)));
+		var names = A2(
+			$author$project$MicroAgda$StringTools$makeFreshList,
+			A3(
+				$author$project$ResultExtra$padRight,
+				k,
+				'i',
+				A2($elm$core$String$split, '', 'ijkl')),
+			ss);
+		return A2(
+			$author$project$ResultExtra$pairR,
+			names,
+			A3(
+				$elm$core$List$foldl,
+				$author$project$ResultExtra$swap($author$project$MicroAgda$Viz$Structures$extendI),
+				dc,
+				names));
+	});
+var $author$project$MicroAgda$Viz$Structures$lookDCtxIns = F2(
+	function (dc, i) {
+		return A2(
+			$elm$core$Result$andThen,
+			$elm$core$Result$fromMaybe('defined but not cubical'),
+			A2(
+				$elm$core$Result$andThen,
+				function (_v0) {
+					var name = _v0.a;
+					var ct = _v0.b;
+					var x = _v0.c;
+					return A2(
+						$elm$core$Result$fromMaybe,
+						'inside not defined',
+						A2(
+							$elm$core$Maybe$map,
+							$elm$core$Maybe$map(
+								function (y) {
+									return _Utils_Tuple3(name, ct, y);
+								}),
+							A2($elm$core$Maybe$map, $author$project$MicroAgda$Viz$Structures$toInside, x)));
+				},
+				A2(
+					$elm$core$Result$fromMaybe,
+					'not in context',
+					A2(
+						$author$project$ResultExtra$lookByIntInList,
+						$elm$core$List$reverse(dc.list),
+						i))));
+	});
+var $author$project$MicroAgda$Viz$Structures$makeGenericTerm = F2(
+	function (dc, i) {
+		return A2(
+			$author$project$MicroAgda$Viz$Structures$describeErr,
+			'makeGenericTerm : ',
+			A2(
+				$elm$core$Result$andThen,
+				function (_v0) {
+					var nameTy = _v0.a;
+					var ct = _v0.b;
+					var _v1 = _v0.c;
+					var n = _v1.a;
+					var _v2 = A2(
+						$author$project$MicroAgda$Viz$Structures$extendInth,
+						n,
+						A2($author$project$MicroAgda$Viz$Structures$truncateCtx, i + 1, dc));
+					var dcc = _v2.a;
+					var nms = _v2.b;
+					return A2(
+						$elm$core$Result$map,
+						$author$project$ResultExtra$pairR(dcc),
+						A2(
+							$elm$core$Result$andThen,
+							function (na) {
+								return (!_Utils_eq(na, n)) ? $elm$core$Result$Err('generated data not consistent with type arity') : ((!n) ? $elm$core$Result$Ok(
+									$author$project$MicroAgda$Internal$Term$ctxVar(i)) : A2(
+									$elm$core$Result$andThen,
+									function (bct) {
+										var rtm = A3(
+											$elm$core$List$foldl,
+											function (name) {
+												return function (rawTerm) {
+													return A2(
+														$author$project$MicroAgda$Raw$App,
+														rawTerm,
+														$author$project$MicroAgda$Raw$Var(name));
+												};
+											},
+											$author$project$MicroAgda$Raw$Var(nameTy),
+											nms);
+										return A2(
+											$author$project$MicroAgda$Viz$Structures$describeErr,
+											'tc er : ',
+											A3(
+												$author$project$MicroAgda$TypeChecker$tC,
+												$author$project$MicroAgda$Viz$Structures$toCtx(dcc),
+												bct,
+												rtm));
+									},
+									$author$project$MicroAgda$TypeChecker$getBaseType(ct)));
+							},
+							A2(
+								$elm$core$Result$fromMaybe,
+								'arity not detteceted',
+								$author$project$MicroAgda$Internal$Ctx$arity(ct))));
+				},
+				A2($author$project$MicroAgda$Viz$Structures$lookDCtxIns, dc, i)));
+	});
+var $author$project$MicroAgda$Viz$Process$drawGenericTerm = F2(
+	function (dcAll, i) {
+		return A2(
+			$elm$core$Result$map,
+			function (_v0) {
+				var n = _v0.b;
+				var _v1 = _v0.c;
+				var dw = _v1.b;
+				return _Utils_Tuple2(n, dw);
+			},
+			A2(
+				$elm$core$Result$andThen,
+				$author$project$MicroAgda$Viz$Process$drawTerm,
+				A2($author$project$MicroAgda$Viz$Structures$makeGenericTerm, dcAll, i)));
+	});
+var $elm$core$Dict$update = F3(
+	function (targetKey, alter, dictionary) {
+		var _v0 = alter(
+			A2($elm$core$Dict$get, targetKey, dictionary));
+		if (_v0.$ === 'Just') {
+			var value = _v0.a;
+			return A3($elm$core$Dict$insert, targetKey, value, dictionary);
+		} else {
+			return A2($elm$core$Dict$remove, targetKey, dictionary);
+		}
+	});
+var $author$project$ResultExtra$gatherByInt = function (f) {
+	return A2(
+		$elm$core$Basics$composeR,
+		A2(
+			$elm$core$List$foldl,
+			function (a) {
+				var i = f(a);
+				return A2(
+					$elm$core$Dict$update,
+					i,
+					A2(
+						$elm$core$Basics$composeR,
+						$elm$core$Maybe$map(
+							function (l) {
+								return _Utils_ap(
+									l,
+									_List_fromArray(
+										[a]));
+							}),
+						A2(
+							$elm$core$Basics$composeR,
+							$elm$core$Maybe$withDefault(
+								_List_fromArray(
+									[a])),
+							$elm$core$Maybe$Just)));
+			},
+			$elm$core$Dict$empty),
+		$elm$core$Dict$toList);
+};
 var $joakin$elm_canvas$Canvas$Internal$Canvas$DrawableClear = F3(
 	function (a, b, c) {
 		return {$: 'DrawableClear', a: a, b: b, c: c};
@@ -20664,12 +21196,6 @@ var $joakin$elm_canvas$Canvas$clear = F3(
 				drawable: A3($joakin$elm_canvas$Canvas$Internal$Canvas$DrawableClear, point, w, h)
 			});
 	});
-var $avh4$elm_color$Color$white = A4($avh4$elm_color$Color$RgbaSpace, 255 / 255, 255 / 255, 255 / 255, 1.0);
-var $author$project$Gui$Draw$defaultDrawingHTMLSettings = {
-	bgColor: $elm$core$Maybe$Just($avh4$elm_color$Color$white),
-	height: 1024,
-	width: 1024
-};
 var $joakin$elm_canvas$Canvas$Internal$Canvas$Fill = function (a) {
 	return {$: 'Fill', a: a};
 };
@@ -20831,6 +21357,8 @@ var $joakin$elm_canvas$Canvas$shapes = F2(
 					drawable: $joakin$elm_canvas$Canvas$Internal$Canvas$DrawableShapes(ss)
 				}));
 	});
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$canvas = _VirtualDom_node('canvas');
 var $joakin$elm_canvas$Canvas$cnvs = A2($elm$html$Html$canvas, _List_Nil, _List_Nil);
 var $elm$json$Json$Encode$list = F2(
@@ -21458,7 +21986,6 @@ var $elm$virtual_dom$VirtualDom$attribute = F2(
 	});
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$json$Json$Decode$andThen = _Json_andThen;
-var $elm$json$Json$Decode$field = _Json_decodeField;
 var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
@@ -21507,8 +22034,6 @@ var $elm$html$Html$Attributes$src = function (url) {
 		'src',
 		_VirtualDom_noJavaScriptOrHtmlUri(url));
 };
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $joakin$elm_canvas$Canvas$renderTextureSource = function (textureSource) {
 	var url = textureSource.a;
 	var onLoad = textureSource.b;
@@ -21902,7 +22427,11 @@ var $author$project$Gui$Draw$drawingHTML = A2(
 					return A3(
 						$joakin$elm_canvas$Canvas$toHtml,
 						_Utils_Tuple2(width, height),
-						_List_Nil,
+						_List_fromArray(
+							[
+								A2($elm$html$Html$Attributes$style, 'width', '100%'),
+								A2($elm$html$Html$Attributes$style, 'heigth', '100%')
+							]),
 						_Utils_ap(
 							_List_fromArray(
 								[
@@ -21979,6 +22508,237 @@ var $author$project$MicroAgda$Viz$Gui$handleDifrentDims = F4(
 					}
 				}()));
 	});
+var $author$project$MicroAgda$Viz$Gui$labelCss = _List_fromArray(
+	[
+		$rtfeldman$elm_css$Css$fontSize(
+		$rtfeldman$elm_css$Css$px(14)),
+		$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace),
+		$rtfeldman$elm_css$Css$textAlign($rtfeldman$elm_css$Css$center),
+		$rtfeldman$elm_css$Css$backgroundColor(
+		A3($rtfeldman$elm_css$Css$rgb, 230, 230, 230)),
+		$rtfeldman$elm_css$Css$padding(
+		$rtfeldman$elm_css$Css$px(4))
+	]);
+var $author$project$MicroAgda$Internal$TranslatePretty$ct2str = function (c) {
+	return A2(
+		$elm$core$Basics$composeR,
+		$author$project$MicroAgda$Internal$Ctx$toTm,
+		A2(
+			$elm$core$Basics$composeR,
+			A2($author$project$MicroAgda$Internal$TranslatePretty$internal2raw, c, _List_Nil),
+			$author$project$MicroAgda$Raw$raw2String));
+};
+var $author$project$MicroAgda$Viz$Gui$mkLabelTy = F2(
+	function (c, ct) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			'???',
+			A2(
+				$elm$core$Maybe$map,
+				function (art) {
+					return A2($author$project$MicroAgda$Internal$TranslatePretty$ct2str, c, ct);
+				},
+				$author$project$MicroAgda$Internal$Ctx$arity(ct)));
+	});
+var $rtfeldman$elm_css$Html$Styled$strong = $rtfeldman$elm_css$Html$Styled$node('strong');
+var $author$project$ResultExtra$uncurry = F2(
+	function (f, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		return A2(f, a, b);
+	});
+var $author$project$MicroAgda$Viz$Gui$ctxHtml = function (dc) {
+	var c = $author$project$MicroAgda$Viz$Structures$toCtx(dc);
+	return A2(
+		$author$project$MicroAgda$Viz$Structures$describeErr,
+		'ctxHtml',
+		A2(
+			$elm$core$Result$map,
+			function (rows) {
+				return A2(
+					$author$project$MicroAgda$Viz$CodeViz$toolBoxWin,
+					'generated generic arguments',
+					A2($rtfeldman$elm_css$Html$Styled$div, _List_Nil, rows));
+			},
+			A2(
+				$elm$core$Result$map,
+				$elm$core$List$map(
+					function (_v4) {
+						var n = _v4.a;
+						var lst = _v4.b;
+						return A2(
+							$rtfeldman$elm_css$Html$Styled$div,
+							_List_fromArray(
+								[$author$project$MicroAgda$Viz$Gui$ctxCellsRowStyle]),
+							_List_fromArray(
+								[
+									A2(
+									$rtfeldman$elm_css$Html$Styled$div,
+									_List_Nil,
+									A2(
+										$elm$core$List$map,
+										A2(
+											$elm$core$Basics$composeR,
+											$elm$core$Tuple$second,
+											$rtfeldman$elm_css$Html$Styled$div(
+												_List_fromArray(
+													[$author$project$MicroAgda$Viz$Gui$ctxCellStyle]))),
+										lst))
+								]));
+					}),
+				A2(
+					$elm$core$Result$map,
+					$author$project$ResultExtra$gatherByInt($elm$core$Tuple$first),
+					A2(
+						$elm$core$Result$map,
+						$elm$core$List$filterMap($elm$core$Basics$identity),
+						A2(
+							$author$project$ResultExtra$mapListResult,
+							function (_v0) {
+								var i = _v0.a;
+								var _v1 = _v0.b;
+								var vName = _v1.a;
+								var ct = _v1.b;
+								var mb = _v1.c;
+								var labelR = $elm$core$Result$Ok(
+									A2(
+										$rtfeldman$elm_css$Html$Styled$div,
+										_List_fromArray(
+											[
+												$rtfeldman$elm_css$Html$Styled$Attributes$css($author$project$MicroAgda$Viz$Gui$labelCss)
+											]),
+										_List_fromArray(
+											[
+												A2(
+												$rtfeldman$elm_css$Html$Styled$strong,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$rtfeldman$elm_css$Html$Styled$text(vName)
+													])),
+												A2(
+												$rtfeldman$elm_css$Html$Styled$div,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$rtfeldman$elm_css$Html$Styled$text(
+														A2($author$project$MicroAgda$Viz$Gui$mkLabelTy, c, ct))
+													]))
+											])));
+								return A2(
+									$elm$core$Result$andThen,
+									function (label) {
+										return A2(
+											$elm$core$Maybe$withDefault,
+											$elm$core$Result$Ok($elm$core$Maybe$Nothing),
+											A2(
+												$elm$core$Maybe$map,
+												function (ec) {
+													if (ec.$ === 'EInterval') {
+														return $elm$core$Result$Ok($elm$core$Maybe$Nothing);
+													} else {
+														var _v3 = ec.a;
+														var n = _v3.a;
+														return A2(
+															$elm$core$Result$map,
+															$elm$core$Maybe$map(
+																$elm$core$Tuple$pair(n)),
+															A2(
+																$elm$core$Result$map,
+																function (x) {
+																	return $elm$core$Maybe$Just(
+																		_List_fromArray(
+																			[x, label]));
+																},
+																A2(
+																	$elm$core$Result$andThen,
+																	$author$project$ResultExtra$uncurry(
+																		A2(
+																			$author$project$MicroAgda$Viz$Gui$handleDifrentDims,
+																			_List_fromArray(
+																				[
+																					$rtfeldman$elm_css$Css$display($rtfeldman$elm_css$Css$inlineBlock)
+																				]),
+																			$author$project$MicroAgda$Viz$Gui$ctxIconS)),
+																	A2($author$project$MicroAgda$Viz$Process$drawGenericTerm, dc, i))));
+													}
+												},
+												mb));
+									},
+									labelR);
+							},
+							A2(
+								$elm$core$List$indexedMap,
+								$elm$core$Tuple$pair,
+								$elm$core$List$reverse(dc.list))))))));
+};
+var $rtfeldman$elm_css$Css$auto = {alignItemsOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible, cursor: $rtfeldman$elm_css$Css$Structure$Compatible, flexBasis: $rtfeldman$elm_css$Css$Structure$Compatible, intOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible, justifyContentOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrAutoOrCoverOrContain: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrNumberOrAutoOrNoneOrContent: $rtfeldman$elm_css$Css$Structure$Compatible, overflow: $rtfeldman$elm_css$Css$Structure$Compatible, pointerEvents: $rtfeldman$elm_css$Css$Structure$Compatible, tableLayout: $rtfeldman$elm_css$Css$Structure$Compatible, textRendering: $rtfeldman$elm_css$Css$Structure$Compatible, touchAction: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'auto'};
+var $rtfeldman$elm_css$Css$fixed = {backgroundAttachment: $rtfeldman$elm_css$Css$Structure$Compatible, position: $rtfeldman$elm_css$Css$Structure$Compatible, tableLayout: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'fixed'};
+var $rtfeldman$elm_css$Css$height = $rtfeldman$elm_css$Css$prop1('height');
+var $rtfeldman$elm_css$Css$UnitlessInteger = {$: 'UnitlessInteger'};
+var $rtfeldman$elm_css$Css$int = function (val) {
+	return {
+		fontWeight: $rtfeldman$elm_css$Css$Structure$Compatible,
+		intOrAuto: $rtfeldman$elm_css$Css$Structure$Compatible,
+		lengthOrNumber: $rtfeldman$elm_css$Css$Structure$Compatible,
+		lengthOrNumberOrAutoOrNoneOrContent: $rtfeldman$elm_css$Css$Structure$Compatible,
+		number: $rtfeldman$elm_css$Css$Structure$Compatible,
+		numberOrInfinite: $rtfeldman$elm_css$Css$Structure$Compatible,
+		numericValue: val,
+		unitLabel: '',
+		units: $rtfeldman$elm_css$Css$UnitlessInteger,
+		value: $elm$core$String$fromInt(val)
+	};
+};
+var $rtfeldman$elm_css$Css$left = $rtfeldman$elm_css$Css$prop1('left');
+var $rtfeldman$elm_css$Css$overflow = $rtfeldman$elm_css$Css$prop1('overflow');
+var $rtfeldman$elm_css$Css$position = $rtfeldman$elm_css$Css$prop1('position');
+var $rtfeldman$elm_css$Css$VhUnits = {$: 'VhUnits'};
+var $rtfeldman$elm_css$Css$vh = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, $rtfeldman$elm_css$Css$VhUnits, 'vh');
+var $rtfeldman$elm_css$Css$VwUnits = {$: 'VwUnits'};
+var $rtfeldman$elm_css$Css$vw = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, $rtfeldman$elm_css$Css$VwUnits, 'vw');
+var $rtfeldman$elm_css$Css$width = $rtfeldman$elm_css$Css$prop1('width');
+var $rtfeldman$elm_css$Css$zIndex = $rtfeldman$elm_css$Css$prop1('z-index');
+var $author$project$MicroAgda$Viz$Gui$fullWindow = $rtfeldman$elm_css$Html$Styled$div(
+	_List_fromArray(
+		[
+			$rtfeldman$elm_css$Html$Styled$Attributes$css(
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$fixed),
+					A2($rtfeldman$elm_css$Css$property, 'display', 'flex'),
+					$rtfeldman$elm_css$Css$width(
+					$rtfeldman$elm_css$Css$vw(100)),
+					$rtfeldman$elm_css$Css$height(
+					$rtfeldman$elm_css$Css$vh(100)),
+					$rtfeldman$elm_css$Css$top(
+					$rtfeldman$elm_css$Css$px(0)),
+					$rtfeldman$elm_css$Css$left(
+					$rtfeldman$elm_css$Css$px(0)),
+					$rtfeldman$elm_css$Css$zIndex(
+					$rtfeldman$elm_css$Css$int(1000)),
+					$rtfeldman$elm_css$Css$backgroundColor(
+					A3($rtfeldman$elm_css$Css$rgb, 255, 255, 255)),
+					$rtfeldman$elm_css$Css$overflow($rtfeldman$elm_css$Css$auto)
+				]))
+		]));
+var $rtfeldman$elm_css$Css$absolute = {position: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'absolute'};
+var $rtfeldman$elm_css$VirtualDom$Styled$property = F2(
+	function (key, value) {
+		return A3(
+			$rtfeldman$elm_css$VirtualDom$Styled$Attribute,
+			A2($elm$virtual_dom$VirtualDom$property, key, value),
+			_List_Nil,
+			'');
+	});
+var $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			$rtfeldman$elm_css$VirtualDom$Styled$property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $rtfeldman$elm_css$Html$Styled$Attributes$id = $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty('id');
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $joakin$elm_canvas$Canvas$Internal$CustomElementJsonApi$setLineDash = function (segments) {
 	return A2(
@@ -22033,7 +22793,6 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$buttonFromId = functi
 			return $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$ErrorButton;
 	}
 };
-var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$buttonDecoder = A2(
 	$elm$json$Json$Decode$map,
 	$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$buttonFromId,
@@ -22395,6 +23154,16 @@ var $author$project$MicroAgda$Viz$Gui$inspectorOverlay = F4(
 									},
 									mba)))))));
 	});
+var $author$project$ResultExtra$errHtml = A2(
+	$author$project$ResultExtra$convergeResult,
+	A2(
+		$elm$core$Basics$composeR,
+		$rtfeldman$elm_css$Html$Styled$text,
+		A2(
+			$elm$core$Basics$composeR,
+			$elm$core$List$singleton,
+			$rtfeldman$elm_css$Html$Styled$div(_List_Nil))),
+	$elm$core$Basics$identity);
 var $elm$virtual_dom$VirtualDom$lazy2 = _VirtualDom_lazy2;
 var $rtfeldman$elm_css$VirtualDom$Styled$lazyHelp = F2(
 	function (fn, arg) {
@@ -22490,6 +23259,7 @@ var $author$project$MicroAgda$Viz$Gui$pulsationAmination = function () {
 			A2($rtfeldman$elm_css$Css$property, 'animation-iteration-count', 'infinite')
 		]);
 }();
+var $rtfeldman$elm_css$Css$relative = {position: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'relative'};
 var $author$project$MicroAgda$Viz$Gui$inspectorCanvas = F5(
 	function (mba, bigCanvasSize, n, ca, drw0) {
 		var overlayCanv = A4($author$project$MicroAgda$Viz$Gui$inspectorOverlay, mba, bigCanvasSize, ca, n);
@@ -22504,7 +23274,15 @@ var $author$project$MicroAgda$Viz$Gui$inspectorCanvas = F5(
 			drw0);
 		return A2(
 			$rtfeldman$elm_css$Html$Styled$div,
-			_List_Nil,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$relative)
+						])),
+					$rtfeldman$elm_css$Html$Styled$Attributes$id('inspectorBox')
+				]),
 			_List_fromArray(
 				[
 					drawingCanv,
@@ -22527,7 +23305,37 @@ var $author$project$MicroAgda$Viz$Gui$inspectorCanvas = F5(
 					overlayCanv)
 				]));
 	});
-var $rtfeldman$elm_css$Css$relative = {position: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'relative'};
+var $rtfeldman$elm_css$Css$maxHeight = $rtfeldman$elm_css$Css$prop1('max-height');
+var $rtfeldman$elm_css$Css$maxWidth = $rtfeldman$elm_css$Css$prop1('max-width');
+var $rtfeldman$elm_css$Css$minWidth = $rtfeldman$elm_css$Css$prop1('min-width');
+var $author$project$MicroAgda$Internal$TranslatePretty$t2strNoCtx = $author$project$MicroAgda$Internal$TranslatePretty$t2str($author$project$MicroAgda$Internal$Ctx$emptyCtx);
+var $author$project$MicroAgda$Viz$CodeViz$signatureVizHtml = function (ct) {
+	return A2(
+		$elm$core$Result$map,
+		function (x) {
+			return A2(
+				$author$project$MicroAgda$Viz$CodeViz$toolBoxWin,
+				'type (sginature)',
+				A2(
+					$rtfeldman$elm_css$Html$Styled$div,
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Html$Styled$Attributes$css(
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace),
+									$rtfeldman$elm_css$Css$padding(
+									$rtfeldman$elm_css$Css$px(4))
+								]))
+						]),
+					_List_fromArray(
+						[x])));
+		},
+		$elm$core$Result$Ok(
+			$rtfeldman$elm_css$Html$Styled$text(
+				$author$project$MicroAgda$Internal$TranslatePretty$t2strNoCtx(
+					$author$project$MicroAgda$Internal$Ctx$toTm(ct)))));
+};
 var $author$project$MicroAgda$Viz$Gui$vizHtmlWindow = function (mba) {
 	var bigCanvasSize = 1024;
 	return A2(
@@ -22561,52 +23369,63 @@ var $author$project$MicroAgda$Viz$Gui$vizHtmlWindow = function (mba) {
 							A2(
 								$author$project$ResultExtra$mapListResult,
 								$elm$core$Basics$identity,
-								_List_fromArray(
-									[
-										A2(
-										$elm$core$Result$map,
-										$rtfeldman$elm_css$Html$Styled$div(
-											_List_fromArray(
-												[
-													$rtfeldman$elm_css$Html$Styled$Attributes$css(
-													_List_fromArray(
-														[
-															$rtfeldman$elm_css$Css$paddingLeft(
-															$rtfeldman$elm_css$Css$px(bigCanvasSize)),
-															$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$relative),
-															$rtfeldman$elm_css$Css$top(
-															$rtfeldman$elm_css$Css$px(0)),
-															$rtfeldman$elm_css$Css$left(
-															$rtfeldman$elm_css$Css$px(0))
-														]))
-												])),
-										$elm$core$Result$Ok(
-											_List_fromArray(
-												[
-													$author$project$ResultExtra$errHtml(
-													A4($author$project$MicroAgda$Viz$CodeViz$codeVizHtml, mba, dc, n, cn2))
-												]))),
-										A2(
-										$elm$core$Result$map,
-										A2(
-											$elm$core$Basics$composeR,
-											$elm$core$List$singleton,
+								$elm$core$List$reverse(
+									_List_fromArray(
+										[
+											A2(
+											$elm$core$Result$map,
 											$rtfeldman$elm_css$Html$Styled$div(
 												_List_fromArray(
 													[
 														$rtfeldman$elm_css$Html$Styled$Attributes$css(
 														_List_fromArray(
 															[
-																$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$absolute),
-																$rtfeldman$elm_css$Css$top(
-																$rtfeldman$elm_css$Css$px(0)),
-																$rtfeldman$elm_css$Css$left(
-																$rtfeldman$elm_css$Css$px(0))
+																$rtfeldman$elm_css$Css$minWidth(
+																$rtfeldman$elm_css$Css$px(250))
 															]))
+													])),
+											$elm$core$Result$Ok(
+												_List_fromArray(
+													[
+														A2($author$project$ResultExtra$lazyResHtml, $author$project$MicroAgda$Viz$CodeViz$signatureVizHtml, ct),
+														A2(
+														$author$project$ResultExtra$lazyResHtml,
+														function (_v5) {
+															var _v6 = _v5.a;
+															var mbaA = _v6.a;
+															var dcA = _v6.b;
+															var _v7 = _v5.b;
+															var nA = _v7.a;
+															var cn2A = _v7.b;
+															return A4($author$project$MicroAgda$Viz$CodeViz$codeVizHtml, mbaA, dcA, nA, cn2A);
+														},
+														_Utils_Tuple2(
+															_Utils_Tuple2(mba, dc),
+															_Utils_Tuple2(n, cn2))),
+														A2($author$project$ResultExtra$lazyResHtml, $author$project$MicroAgda$Viz$Gui$ctxHtml, dc)
 													]))),
-										$elm$core$Result$Ok(
-											A5($author$project$MicroAgda$Viz$Gui$inspectorCanvas, mba, bigCanvasSize, n, cn2, drw0)))
-									])));
+											A2(
+											$elm$core$Result$map,
+											A2(
+												$elm$core$Basics$composeR,
+												$elm$core$List$singleton,
+												$rtfeldman$elm_css$Html$Styled$div(
+													_List_fromArray(
+														[
+															$rtfeldman$elm_css$Html$Styled$Attributes$css(
+															_List_fromArray(
+																[
+																	$rtfeldman$elm_css$Css$maxWidth(
+																	$rtfeldman$elm_css$Css$vw(100)),
+																	$rtfeldman$elm_css$Css$maxHeight(
+																	$rtfeldman$elm_css$Css$vh(100)),
+																	$rtfeldman$elm_css$Css$width(
+																	$rtfeldman$elm_css$Css$px(bigCanvasSize))
+																]))
+														]))),
+											$elm$core$Result$Ok(
+												A5($author$project$MicroAgda$Viz$Gui$inspectorCanvas, mba, bigCanvasSize, n, cn2, drw0)))
+										]))));
 					},
 					function () {
 						if (mbDone.$ === 'Just') {
@@ -22739,20 +23558,7 @@ var $author$project$Gui$Code$gray = function (x) {
 	return A4($rtfeldman$elm_css$Css$rgba, x, x, x, 255);
 };
 var $author$project$Gui$Code$black = $author$project$Gui$Code$gray(0);
-var $rtfeldman$elm_css$Css$prop3 = F4(
-	function (key, argA, argB, argC) {
-		return A2(
-			$rtfeldman$elm_css$Css$property,
-			key,
-			A2(
-				$elm$core$String$join,
-				' ',
-				_List_fromArray(
-					[argA.value, argB.value, argC.value])));
-	});
-var $rtfeldman$elm_css$Css$border3 = $rtfeldman$elm_css$Css$prop3('border');
 var $author$project$Gui$Code$codeIconSize = 256;
-var $rtfeldman$elm_css$Css$fontSize = $rtfeldman$elm_css$Css$prop1('font-size');
 var $author$project$Gui$Code$codeCss = _List_fromArray(
 	[
 		$rtfeldman$elm_css$Css$fontSize(
@@ -22838,6 +23644,9 @@ var $author$project$Gui$Code$def2HeadCode = function (x) {
 					$author$project$MicroAgda$File$madToUnParsed(x)))
 			]));
 };
+var $rtfeldman$elm_css$Css$color = function (c) {
+	return A2($rtfeldman$elm_css$Css$property, 'color', c.value);
+};
 var $author$project$Gui$Code$lookupDef = F3(
 	function (d, i, xs) {
 		lookupDef:
@@ -22881,7 +23690,6 @@ var $elm$core$String$repeat = F2(
 	function (n, chunk) {
 		return A3($elm$core$String$repeatHelp, n, chunk, '');
 	});
-var $rtfeldman$elm_css$Css$solid = {borderStyle: $rtfeldman$elm_css$Css$Structure$Compatible, textDecorationStyle: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'solid'};
 var $author$project$Gui$Code$deadEnd2Html = F2(
 	function (code, de) {
 		return A2(
@@ -23210,7 +24018,6 @@ var $author$project$Gui$Code$file2Html = F3(
 				A2($author$project$Gui$Code$simpleDef2Html, f2hs, iconF),
 				l));
 	});
-var $author$project$Gui$Draw$defCanvSet = $author$project$Gui$Draw$defaultDrawingHTMLSettings;
 var $author$project$MicroAgda$Viz$Gui$vizSmallPrev = function (vizPrevIconSize) {
 	var vizPrevS = _Utils_update(
 		$author$project$Gui$Draw$defCanvSet,
@@ -23252,7 +24059,6 @@ var $author$project$Main$fileView = function (file) {
 var $author$project$Main$ExitFullScreen = {$: 'ExitFullScreen'};
 var $rtfeldman$elm_css$Css$dotted = {borderStyle: $rtfeldman$elm_css$Css$Structure$Compatible, textDecorationStyle: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'dotted'};
 var $rtfeldman$elm_css$Css$none = {backgroundImage: $rtfeldman$elm_css$Css$Structure$Compatible, blockAxisOverflow: $rtfeldman$elm_css$Css$Structure$Compatible, borderStyle: $rtfeldman$elm_css$Css$Structure$Compatible, cursor: $rtfeldman$elm_css$Css$Structure$Compatible, display: $rtfeldman$elm_css$Css$Structure$Compatible, hoverCapability: $rtfeldman$elm_css$Css$Structure$Compatible, inlineAxisOverflow: $rtfeldman$elm_css$Css$Structure$Compatible, keyframes: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrNone: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrNoneOrMinMaxDimension: $rtfeldman$elm_css$Css$Structure$Compatible, lengthOrNumberOrAutoOrNoneOrContent: $rtfeldman$elm_css$Css$Structure$Compatible, listStyleType: $rtfeldman$elm_css$Css$Structure$Compatible, listStyleTypeOrPositionOrImage: $rtfeldman$elm_css$Css$Structure$Compatible, none: $rtfeldman$elm_css$Css$Structure$Compatible, outline: $rtfeldman$elm_css$Css$Structure$Compatible, pointerDevice: $rtfeldman$elm_css$Css$Structure$Compatible, pointerEvents: $rtfeldman$elm_css$Css$Structure$Compatible, resize: $rtfeldman$elm_css$Css$Structure$Compatible, scriptingSupport: $rtfeldman$elm_css$Css$Structure$Compatible, textDecorationLine: $rtfeldman$elm_css$Css$Structure$Compatible, textTransform: $rtfeldman$elm_css$Css$Structure$Compatible, touchAction: $rtfeldman$elm_css$Css$Structure$Compatible, transform: $rtfeldman$elm_css$Css$Structure$Compatible, updateFrequency: $rtfeldman$elm_css$Css$Structure$Compatible, value: 'none'};
-var $rtfeldman$elm_css$Css$padding = $rtfeldman$elm_css$Css$prop1('padding');
 var $rtfeldman$elm_css$Css$right = $rtfeldman$elm_css$Css$prop1('right');
 var $author$project$Main$fullScreenView = F3(
 	function (model, appHtml, winHtml) {

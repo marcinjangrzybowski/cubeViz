@@ -41,7 +41,7 @@ import Css.Animations as Anim
 import Html
 import Html.Events.Extra.Mouse as EM
 import Html.Styled exposing (..)
-import Html.Styled.Attributes exposing (css, href, src)
+import Html.Styled.Attributes exposing (css, href, src , id)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Lazy exposing (..)
 
@@ -132,9 +132,12 @@ inspectorCanvas : Maybe Address -> Int -> Int -> Cub a -> Drawing (MetaColor)
                     ->  (Html (Maybe Address))
 inspectorCanvas mba bigCanvasSize n ca drw0 =
     let bcs = { width = bigCanvasSize , height = bigCanvasSize , bgColor = Just Color.white }
-        drawingCanv = lazyResHtml (handleDifrentDims [] bcs n) drw0
+        drawingCanv = lazyResHtml (handleDifrentDims [
+                                         -- width (pct 100)
+                                             
+                                       ] bcs n) drw0
         overlayCanv = inspectorOverlay mba bigCanvasSize ca n               
-    in div [] [
+    in div [css [position relative] , id "inspectorBox" ] [
            drawingCanv
         , div [
              
@@ -253,17 +256,16 @@ ctxHtml dc =
                     ]
                    ))   
     -- |> Result.map (List.map (div [ctxCellStyle]))
-    |> Result.map (div [])
+    |> Result.map (\rows -> 
+                             toolBoxWin
+                             "generated generic arguments"
+                             (div [] rows)
+                           )
     |> describeErr ("ctxHtml")     
 
 
        
-fullWindow : List (Html msg) -> Html msg
-fullWindow = div [css [
-                    position fixed
-                    , width (vw 100) , height (vw 100) , top (px 0) , left (px 0)
-                    , zIndex (int 1000) , backgroundColor (rgb 255 255 255)    
-                  ]]
+
 
 fwCol : Int -> Int -> List (Html msg) -> Html msg
 fwCol l w = div [
@@ -279,6 +281,16 @@ type alias InspectorModel = {}
 
 initInspectorModel : InspectorModel
 initInspectorModel = {}
+
+fullWindow : List (Html msg) -> Html msg
+fullWindow = div [css [
+                    position fixed
+                    , property "display" "flex"
+                    -- , flexWrap wrap    
+                    , width (vw 100) , height (vh 100) , top (px 0) , left (px 0)
+                    , zIndex (int 1000) , backgroundColor (rgb 255 255 255)
+                    , overflow auto    
+                  ]]
                      
 vizHtmlWindow : (Maybe Address) -> Result String ((C.CType , I.Term) , Maybe AllWorkType)
                  -> Html (Maybe Address , Maybe AllWorkType)
@@ -295,23 +307,32 @@ vizHtmlWindow mba =
                 [
                   Ok 
                       [
-                         codeVizHtml mba dc n cn2 |> errHtml 
-                       -- , lazyResHtml ctxHtml dc
+                         lazyResHtml signatureVizHtml ct       
+                       , lazyResHtml
+                                 (\((mbaA , dcA) , (nA , cn2A)) -> codeVizHtml mbaA dcA nA cn2A )
+                                 ((mba , dc) , (n , cn2)) 
+                       , lazyResHtml ctxHtml dc
+
                            
                       ]
                   |> Result.map (
                      div [css [
-                             paddingLeft (px bigCanvasSize)
-                             , position relative , top (px 0) , left (px 0)
+                             -- paddingLeft (px bigCanvasSize)
+                             -- ,
+                             -- position relative , top (px 0) , left (px 0)
+                             minWidth (px 250)
+                                 
                           ]])
                 ,
                   inspectorCanvas mba bigCanvasSize n cn2 drw0 |> Ok
                       |> Result.map (List.singleton >>
                      div [css [
-                            position absolute , top (px 0) , left (px 0) 
-                                
+                            -- position absolute , top (px 0) , left (px 0) 
+                              maxWidth (vw 100)
+                              , maxHeight (vh 100)
+                              , width (px  bigCanvasSize)   
                           ]])
-                ]
+                ] |> List.reverse
                |> mapListResult (identity)
                |> Result.map (
                      fullWindow
