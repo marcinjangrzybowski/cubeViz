@@ -23413,7 +23413,7 @@ var $author$project$MicroAgda$Viz$Gui$vizHtmlWindow = function (mba) {
 															$rtfeldman$elm_css$Html$Styled$Attributes$css(
 															_List_fromArray(
 																[
-																	$rtfeldman$elm_css$Css$width(
+																	$rtfeldman$elm_css$Css$minWidth(
 																	$rtfeldman$elm_css$Css$px(bigCanvasSize)),
 																	$rtfeldman$elm_css$Css$height(
 																	$rtfeldman$elm_css$Css$px(bigCanvasSize)),

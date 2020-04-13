@@ -331,7 +331,7 @@ vizHtmlWindow mba =
 --                              maxWidth (vw 100)
 --                              , maxHeight (vh 100)
                               --,
-                                  width (px  bigCanvasSize)
+                                  minWidth (px  bigCanvasSize)
                                   , height (px  bigCanvasSize)
                                   , position relative    
                           ]])
