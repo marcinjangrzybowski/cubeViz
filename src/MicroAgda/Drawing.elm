@@ -185,6 +185,8 @@ sidePrll b (n , l) =
     else ( (n - 1)  , (choose b List.take List.drop) ( 2 ^ (n - 1)) l
             )      
 
+
+        
 -- it not changes dim of ambient space!
 fillPrll : Int -> Prll -> Prll -> Prll
 fillPrll k (n , p) = fillPrllUS (min k n) (n , p)
@@ -199,7 +201,29 @@ fillPrllUS k =
                (fillPrll (k - 1) (sidePrll False p0) (sidePrll False p1)) 
                (fillPrll (k - 1) (sidePrll True p0) (sidePrll True p1))
                )       
-    
+-- it not changes dim of ambient space!
+
+extrudeDrawingBi : List Float -> Drawing a -> Drawing a
+extrudeDrawingBi v drw =  
+  zip (translate (List.map (\x -> x * -1) v) drw , translate v drw)
+    |> List.map (\((s , a) , (ns , _)) ->
+
+             (fillPrll 0 s ns , a)
+                )
+                   
+extrudeDrawing : List Float -> Drawing a -> Drawing a
+extrudeDrawing v drw =
+  let newFace = translate v drw
+  in zip (drw , newFace)
+    |> List.map (\((s , a) , (ns , _)) ->
+
+             (fillPrll 0 s ns , a)
+                )
+    -- (Tuple.mapFirst             
+    -- (\x -> fillPrll k
+    --    (embedPrll k (const 0) x)
+    --    (embedPrll k (const 1) x) 
+    -- ))    
 -- 
 
 -- it not changes dim of ambient space!        

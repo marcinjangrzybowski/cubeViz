@@ -94,10 +94,11 @@ renderSquare =
       [ rect (100, 100) 100 50 ]             
 
 
-type alias DrawingHTMLSettings = { width : Int , height : Int , bgColor : Maybe Color.Color }
+type alias DrawingHTMLSettings =
+    { width : Int , height : Int , bgColor : Maybe Color.Color , styles : List (String, String) }
 
 
-defaultDrawingHTMLSettings = { width = 1024 , height = 1024 , bgColor = Just Color.white }
+defaultDrawingHTMLSettings = { width = 1024 , height = 1024 , bgColor = Just Color.white , styles = [] }
 
 defCanvSet = defaultDrawingHTMLSettings
                              
@@ -120,7 +121,8 @@ drawingHTML =
        (\rls ->
 
            Canvas.toHtml (width, height) 
-               [ style "width" "100%" , style "heigth" "100%" ]
+               ([ style "width" "100%" , style "heigth" "100%" ]
+                    ++ (ds.styles |> List.map (uncurry style))  )
                ([clear ( 0, 0 ) (toFloat width) (toFloat height)] ++ 
                (List.append
                     bgshp

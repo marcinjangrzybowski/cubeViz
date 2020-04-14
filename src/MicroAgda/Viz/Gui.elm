@@ -39,6 +39,7 @@ import Css exposing (..)
 import Css.Animations as Anim
 
 import Html
+import Html.Attributes as HA
 import Html.Events.Extra.Mouse as EM
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css, href, src , id)
@@ -96,42 +97,102 @@ pulsationAmination =
 relativePos : EM.Event -> ( Float, Float )
 relativePos mouseEvent =
     mouseEvent.offsetPos
+
+
+dimArrowBlockDrawing : Int -> Int -> String -> Drawing (DStyle)
+dimArrowBlockDrawing n i vName =
+    let
+        aWi = 0.05
+        aMarg = 0.1      
+        segs =
+            range n
+          |> List.map (\j -> choose (i == j) (Seg aMarg (aMarg + aWi)) (Seg aMarg (1 - aMarg)))
+    in
     
+    [
+      (fromLSeg segs , (Color.black , [])) 
+    ]
+
+dimArrowDrawing : Int -> Int -> String -> Drawing (DStyle)
+dimArrowDrawing n i vName =
+    let
+        aWi = 0.05
+        aMarg = 0.1      
+        segs =
+            range n
+          |> List.map (\j -> choose (i == j) (Pt (aMarg)) (Seg aMarg (1 - aMarg)))
+    in
+    
+    [
+      (fromLSeg segs , (Color.black , [lineWidth 5])) 
+    ]
+    
+                  
 inspectorOverlay : Maybe Address -> Int -> Cub a -> Int
                     ->  List (Html (Maybe Address))
 inspectorOverlay mba bigCanvasSize ca n =
-    let bcs = { width = bigCanvasSize , height = bigCanvasSize , bgColor = Nothing }
+    let bcs = { width = bigCanvasSize , height = bigCanvasSize , bgColor = Nothing
+              , styles = [("position","absolute")] }
 
         selShp : Address -> Drawing DStyle     
         selShp addrs =
+            let m = finalAddressDim n addrs in
             combineDrawings
-              [  [(unitHyCube 2 , ((Color.rgba 0 0 0 0.5) , []))]
-               , (outlineNd 2 (Color.black , [lineWidth 4]))
-               , (outlineNd 2 (Color.white , [lineWidth 2 , lineDash [ 5 , 5] ]))
-                    ]
-    in
+              (List.append
+                   [  [(unitHyCube m , ((Color.rgba 0 0 0 0.5) , []))] ]
+                   (if m == n
+                    then [
+                     (outlineNd 2 (Color.black , [lineWidth 4]))
+                   , (outlineNd 2 (Color.white , [lineWidth 2 , lineDash [ 5 , 5] ]))
+                        ] 
+                      -- ++(range n |> List.map (\i -> dimArrowDrawing n i "x"))
+                    else []))
+                  
+        arrShp : Address -> Drawing DStyle          
+        arrShp addrs =
+            let m = finalAddressDim n addrs in
+            combineDrawings
+              (List.append
+                   [  ]
+                   (if m == n
+                    then (range n |> List.map (\i -> dimArrowDrawing n i "x"))
+                    else []))
+    in           
     mba |> Maybe.map ( \addrs ->
-                        (selShp addrs  
-                       |> unmasked
-                       |> transAddress addrs
+                        [
 
-                      )) |> Maybe.withDefault []
-        |> drawingHTML (Just bcs)                        
-        |> List.singleton 
+                         (drawingHTML
+                             (Just bcs) ((selShp addrs) |> unmasked |> (transAddress addrs)))
+                         |> fromUnstyled
+                        |> List.singleton |> div [css pulsationAmination]
+                        |> toUnstyled
+
+                        , drawingHTML
+                             (Just bcs) ((arrShp addrs) |> unmasked |> (transAddress addrs))
+                        ]  
+                       )
+
+        |> Maybe.withDefault []
+        -- |> List.map (drawingHTML (Just bcs))                        
+        -- |> List.singleton 
         |> Html.div [EM.onDown (relativePos
                                 >> mapSame ((\x -> x / (toFloat bigCanvasSize)))
                                 >> (\(x , y) ->
                                         -- let _ = log "xx" (x,y) in
                                           pointDettect [x , y] ca)
                                 
-                                            )]
+                                            ) , HA.style "width" "100%"
+                                              , HA.style "height" "100%"
+                    
+                    ]
         |> fromUnstyled
         |> List.singleton
            
 inspectorCanvas : Maybe Address -> Int -> Int -> Cub a -> Drawing (MetaColor)
                     ->  (Html (Maybe Address))
 inspectorCanvas mba bigCanvasSize n ca drw0 =
-    let bcs = { width = bigCanvasSize , height = bigCanvasSize , bgColor = Just Color.white }
+    let bcs = { width = bigCanvasSize , height = bigCanvasSize , bgColor = Just Color.white
+              , styles = [] }
         drawingCanv = lazyResHtml (handleDifrentDims [
                                          -- width (pct 100)
                                              
@@ -143,7 +204,10 @@ inspectorCanvas mba bigCanvasSize n ca drw0 =
              
               
               css ([position absolute
-              , top (px 0) , left (px 0)] ++ pulsationAmination)
+              , top (px 0) , left (px 0)
+              , width (px (toFloat bigCanvasSize) ) , height (px (toFloat bigCanvasSize) )]
+                       -- ++ pulsationAmination
+                  )
             ]
             overlayCanv 
         ]

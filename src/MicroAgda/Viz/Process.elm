@@ -500,9 +500,18 @@ combineCells (dc , n0 , cn4 ) =
                                                 |> Result.andThen
                                                    (\dcSF -> colA dcSF (getSubFaceDim sf + 1) xx )
                                                 |> Result.map (sideFix sf)
-                                                |> Result.map (sideTransSF defaultCompPar sf)
+                                                |> Result.map (\(dr , b) ->
 
-                                ) |> Result.map combineDrawings
+                                                               ( choose b 0 1 ,    
+                                                               sideTransSF defaultCompPar sf (dr , b)
+                                                               )    
+                                                              )
+                                                -- |> Result.map (Tuple.pair 1)
+
+                                )
+                           |> Result.map (List.sortBy Tuple.first)   
+                           |> Result.map (List.map Tuple.second)
+                           |> Result.map combineDrawings
                               
                 capDrw = (colA dc n0 cap) |> Result.map (centerTransDrw defaultCompPar n0)
 
@@ -526,11 +535,31 @@ sideTransSF cp sf (x , b) =
           xx = (List.foldr (\f -> \d ->  (f d)) x rest)
           -- xxx = if List.length rest > 0
           --       then log "rest" ( x , log "restXXX" xx)
-          --       else ( x , xx)    
-      in        
-          toFaceForce sf
-          |> Maybe.map (\f -> sideTransDrw cp n f (xx , b))
-          |> Maybe.withDefault x -- <- should not happen   
+          --       else ( x , xx)
+          fixedRest = toFaceForce sf
+                      |> Maybe.map (\f -> sideTransDrw cp n f (xx , b))
+                      |> Maybe.withDefault x  -- <- should not happen     
+      in
+      case (rest , n) of
+        ([y] , 2) -> --fixedRest   
+                     combineDrawings
+                      [
+                       extrudeDrawingBi
+                           (subFaceLI.toL sf
+                           |> List.indexedMap
+                                (\i ->  Maybe.map (\(bb) -> 
+                                  case i of
+                                    0 -> (choose (not bb) -1 1)
+                                    _ -> (choose bb -1 1)
+                                  )
+                                )
+                           |> List.filterMap (Maybe.map (\z -> z * 0.01 )))
+                           fixedRest
+                      -- ,extrudeDrawing [0.05 , 0.05] fixedRest
+                      ]    
+        ([] , _)-> fixedRest      
+        _ -> fixedRest 
+
                              
 
 outlineNd : Int -> a -> Drawing a 

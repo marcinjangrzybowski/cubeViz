@@ -592,7 +592,13 @@ contextualizeFace dc n (i , b) ct =
 
 
 
-                
+finalAddressDim : Int -> Address -> Int
+finalAddressDim n =
+    List.reverse >> List.head
+    >> Maybe.andThen subFaceCases
+    >> Maybe.map (getSubFaceDim >> succ)
+    >> Maybe.withDefault n
+       
 flipAddress : Int -> Address -> Address 
 flipAddress k =
     List.map (
