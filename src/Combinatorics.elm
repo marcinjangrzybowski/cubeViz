@@ -408,6 +408,10 @@ pieceLI = prodLI subsetLI permutationLI isoPiece
             
 -- Face
 
+allFaces : Int -> List (Face)
+allFaces n = List.range 0 ((2 * n) - 1)
+                    |> List.map (\x -> (x//2 , (modBy 2 x == 1) ))           
+
 tabulateFaces : Int -> (Face -> x) -> List (Face , x)
 tabulateFaces n f =
     (range (2 * n))

@@ -1,10 +1,10 @@
 module MicroAgda.Viz.Gui exposing (..)
 
-import MicroAgda.Internal.Term as I
 import MicroAgda.Internal.Ctx as C
-import MicroAgda.TypeChecker as TC
+import MicroAgda.Internal.Term as I
 import MicroAgda.Internal.Translate as T
 import MicroAgda.Internal.TranslatePretty as TP
+import MicroAgda.TypeChecker as TC
 
 import MicroAgda.Drawing as Drw exposing  (..)
 
@@ -27,13 +27,13 @@ import Canvas.Settings.Line exposing (..)
 
 import Combinatorics exposing (..)
 
-import  MicroAgda.Viz.Structures exposing (..)
-import  MicroAgda.Viz.PiecesEval exposing (..)
-import  MicroAgda.Viz.Remap exposing (..)
-import  MicroAgda.Viz.FloatFunctions exposing (..)
-import  MicroAgda.Viz.Style exposing (..)
-import  MicroAgda.Viz.Process exposing (..)
 import  MicroAgda.Viz.CodeViz exposing (..)
+import  MicroAgda.Viz.FloatFunctions exposing (..)
+import  MicroAgda.Viz.PiecesEval exposing (..)
+import  MicroAgda.Viz.Process exposing (..)
+import  MicroAgda.Viz.Remap exposing (..)
+import  MicroAgda.Viz.Structures exposing (..)
+import  MicroAgda.Viz.Style exposing (..)
 
 import Css exposing (..)
 import Css.Animations as Anim
@@ -161,6 +161,16 @@ inspectorCanvas mba bigCanvasSize n ca drw0 =
 --         (\x -> node "pre" [] [text x] )
 --         (identity)
 
+
+termHtmlSimple : List Style -> Int -> (DCtx , I.Term) -> Result String (Html msg)
+termHtmlSimple ls size (dc , tm) =
+    drawTerm (tm , dc)
+   |> Result.andThen (\(_ , n , (_ , drw)) ->
+        handleDifrentDims ls
+            { defCanvSet | width = size , height = size } n
+                 drw     
+                 ) |> describeErr "termHtmlSimple"      
+                 
 -- cSetHtml :  DrawingHTMLSettings -> Inside -> Result String (Html msg)
 -- cSetHtml s (n , f) =
 --     (n , f) |> drawInside |> handleDifrentDims s n
@@ -197,17 +207,7 @@ mkLabelTy c ct =
           C.arity ct 
        |> Maybe.map (\art ->
             case art of
-                _ -> (TP.ct2str c ct)
-                -- 1 -> "todo"
-                --    -- case ((cuTyCorner ct (Subset 1 0)) , (cuTyCorner ct (Subset 1 1))) of
-                --    --     (Ok e0 , Ok e1) -> (T.t2str c e0) ++ " ≡ " ++ (T.t2str c e1)
-                --    --     (_) -> "mkLabelTy Error!"  
-                -- 2 -> 
-                --       mapListResult (cuTyFace c ct >> Result.map (T.t2str c) )
-                --           [(0,False),(0,True),(1,False),(1,True)]
-                --      |> Result.map (\l -> "Square" ++ " " ++ (String.join (" ") l))
-                --      |> convergeResult (\e -> "unable to gen faces: " ++ e) (identity)    
-                -- _ -> (T.ct2str c ct)         
+                _ -> (TP.ct2str c ct)     
          )              
        |> Maybe.withDefault "???"
 
@@ -289,7 +289,7 @@ fullWindow = div [css [
                     -- , flexWrap wrap    
                     , width (vw 100) , height (vh 100) , top (px 0) , left (px 0)
                     , zIndex (int 1000) , backgroundColor (rgb 255 255 255)
-                    , overflow auto    
+                    -- , overflow auto    
                   ]]
                      
 vizHtmlWindow : (Maybe Address) -> Result String ((C.CType , I.Term) , Maybe AllWorkType)
@@ -307,7 +307,8 @@ vizHtmlWindow mba =
                 [
                   Ok 
                       [
-                         lazyResHtml signatureVizHtml ct       
+                         lazyResHtml signatureVizHtml dc
+                       , lazyResHtml boundariesVizHtml ((n , ct) , dc)      
                        , lazyResHtml
                                  (\((mbaA , dcA) , (nA , cn2A)) -> codeVizHtml mbaA dcA nA cn2A )
                                  ((mba , dc) , (n , cn2)) 
@@ -321,7 +322,8 @@ vizHtmlWindow mba =
                              -- ,
                              -- position relative , top (px 0) , left (px 0)
                              minWidth (px 250)
-                                 
+                            , overflow auto
+                            , height (pct 100)     
                           ]])
                 ,
                   inspectorCanvas mba bigCanvasSize n cn2 drw0 |> Ok
@@ -331,9 +333,11 @@ vizHtmlWindow mba =
 --                              maxWidth (vw 100)
 --                              , maxHeight (vh 100)
                               --,
-                                  minWidth (px  bigCanvasSize)
-                                  , height (px  bigCanvasSize)
-                                  , position relative    
+                                  -- minWidth (px  bigCanvasSize)
+                                    height (px  bigCanvasSize)
+                                  , minWidth (px  bigCanvasSize)    
+                                  ,
+                                  position relative    
                           ]])
                 ] |> List.reverse
                |> mapListResult (identity)
@@ -362,3 +366,70 @@ vizSmallPrev vizPrevIconSize =
                                 
    )) >> Result.map (List.singleton)
       >> Result.toMaybe                
+
+
+
+boundariesHtml : ((Int , C.CType) , DCtx) -> Result String (Html (Maybe Address))
+boundariesHtml ((n , ct) , dc) =
+   let (cuC , cuTy) =  C.toCubical C.emptyCtx ct
+
+       sizeShort = 32
+       sizeLong = 162               
+                       
+       faceStyle : Face -> (List Style , List Style) 
+       faceStyle (i , b) =
+           case n of
+               2 ->
+                 case i of
+                     0 -> ([width (px sizeShort) , height (px sizeLong)]
+                          , [
+                              left (px (choose b 0 (sizeShort + sizeLong)))
+                              , top (px sizeShort)    
+                            ])
+                     _ -> ([width (px (sizeLong)) , height (px sizeShort)]
+                          , [
+                              top (px (choose b 0 (sizeShort + sizeLong)))
+                              , left (px sizeShort)    
+                            ])   
+               _ -> ([] , [])
+                    
+   in
+   allFaces n
+   |> mapListResult (\(i , b) ->
+                      contextualizeFace dc n (i , b) cuTy
+                      
+                      |> Result.andThen (termHtmlSimple (faceStyle (i , b) |> Tuple.first) 128)
+                      |> ((dimIndexToName dc (DimIndex i)
+                          |> Result.fromMaybe ("unable to get Index name")
+                          
+                          )                         
+                      |> Result.map2 (\dimName -> \fceHtml ->
+                            div [faceStyle (i , b) |> Tuple.second
+                                |> List.append [ position absolute]
+                                |> css] [
+                                  span []
+                                      [
+                                        span [] [text "("]
+                                      , span [] [text (dimName)]
+                                      , span [] [text " = "]
+                                      , span [] [text (choose b "i0" "i1")]
+                                      , span [] [text ")"]
+                                      ]
+                                  , fceHtml
+                                ]
+                           )
+                     ))
+   |> Result.map (div [css [position relative , height (px (3 * sizeShort + sizeLong))]])    
+       
+boundariesVizHtml : ((Int , C.CType) , DCtx) -> Result String (Html (Maybe Address))
+boundariesVizHtml =
+       boundariesHtml
+    >> Result.map (\x -> toolBoxWin "constraints"
+                       (
+                         div [css [
+                               fontFamily monospace
+                              , padding (px 4) 
+                              ]] [x]
+                       ) 
+                   )                                 
+          

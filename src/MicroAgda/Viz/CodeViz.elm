@@ -102,7 +102,7 @@ collectCubHtml mba adrs (dc , n , cH) =
         sf2Str sf =
                subFaceLI.toL sf
                |> List.indexedMap ( \x -> \mb ->
-                                   C.lookNameByInt (toCtx dc) (fromDimIndex dc (DimIndex x))
+                                   dimIndexToName dc (DimIndex x)
                                    |> Maybe.map2 (\b -> \name ->  ((name , x) , b) ) mb
                                   )
                |> List.filterMap identity    
@@ -209,12 +209,75 @@ toolBoxWin title bdy =
          subWinHead title
          , bdy
           ]
-             
+
+codeHtml : Maybe Address -> DCtx -> Int -> Cub N2 -> Result String (Html (Maybe Address))
+codeHtml  mba dc n cn2 = 
+      stepMap (genHtml mba) (Ok (dc , n , cn2))
+    |> Result.map (collectCubHtml mba [])
+       
 codeVizHtml : Maybe Address -> DCtx -> Int -> Cub N2 -> Result String (Html (Maybe Address))
 codeVizHtml mba dc n cn2 =
-    stepMap (genHtml mba) (Ok (dc , n , cn2))
-    |> Result.map (collectCubHtml mba [])
+       codeHtml  mba dc n cn2
     |> Result.map (\x -> toolBoxWin "normal form"
+                       (
+                         div [css [
+                               fontFamily monospace
+                              , padding4 (px 4) (px 20) (px 20) (px 4) 
+                              ]] [x]
+                       ) 
+                   )
+
+
+dCtxHtml : DCtx -> Result String (Html (Maybe Address))
+dCtxHtml dc =
+    let c = toCtx dc in
+    dc.list
+    --|> List.reverse
+    |> gatherByToStrStable
+       (\(_ , x , _) -> x) (T.ct2str (toCtx dc)) 
+    |> List.map (\(ty , ls) ->
+                  let tyStr = (T.ct2str (toCtx dc) ty) in   
+                  div [] [ 
+                           span []
+                              (List.map (\(vName , vTy, _) -> text (vName ++ " ")) ls)
+                         , span [] [(text " : ")] , span [] [(text tyStr)]
+                         ]
+                )
+    |> div []
+    |> Ok
+
+
+-- typeHtmlStep : C.Ctx -> C.CType -> Result String (Html (Maybe Address))      
+-- typeHtmlStep c ct =
+--     case I.toPiData (C.toTm ct) of
+--         Nothing -> Ok (div [] [text (TP.ct2str c ct)])
+--         Just (do , bo) ->         
+--             let tyTail = (I.absApply bo (I.Def (I.FromContext ( (List.length c) )) []))
+--                 tyHead = C.CT do.unDom
+--                 cTail = C.extend c bo.absName tyHead        
+--             in tyTail
+--                |> Result.andThen (C.CT >> typeHtmlStep cTail)
+--                |> ( (typeHtmlStep c tyHead )   
+--                |> Result.map2 (\(headHtml) -> \(tailHtml) ->
+--                             div [] [ headHtml , text (" -> " )  , tailHtml ] 
+--                                  ))   
+
+typeHtmlStep : C.Ctx -> C.CType -> Result String (Html (Maybe Address))      
+typeHtmlStep c ct =
+    C.toCubical c ct
+   |> uncurry TP.ct2str     
+   |> text
+   |> Ok
+      
+typeHtml : C.CType -> Result String (Html (Maybe Address))
+typeHtml =
+    typeHtmlStep C.emptyCtx
+
+       
+signatureVizHtml : DCtx -> Result String (Html (Maybe Address))
+signatureVizHtml dc =
+       dCtxHtml dc       
+    |> Result.map (\x -> toolBoxWin "context"
                        (
                          div [css [
                                fontFamily monospace
@@ -222,17 +285,16 @@ codeVizHtml mba dc n cn2 =
                               ]] [x]
                        ) 
                    )
-                    
-signatureVizHtml : C.CType -> Result String (Html (Maybe Address))
-signatureVizHtml ct =
-       (TP.t2strNoCtx (C.toTm ct))
-    |> text
-    |> Ok       
-    |> Result.map (\x -> toolBoxWin "type (sginature)"
+
+typeVizHtml : C.CType -> Result String (Html (Maybe Address))
+typeVizHtml ct =
+       typeHtml ct       
+    |> Result.map (\x -> toolBoxWin "type"
                        (
                          div [css [
                                fontFamily monospace
                               , padding (px 4) 
                               ]] [x]
                        ) 
-                   )                   
+                   )                          
+

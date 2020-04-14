@@ -434,6 +434,8 @@ padRight n x l =
 interp : Float -> Float -> Float -> Float
 interp x0 x1 t = x0 * (1 - t) + (x1 * t)
 
+
+                 
 gatherByInt : (a -> Int) -> List a -> List (Int , List a)
 gatherByInt f =
     List.foldl (\a ->
@@ -443,4 +445,31 @@ gatherByInt f =
                       >> Maybe.withDefault ([a])
                       >> Just) 
                ) Dict.empty
-    >> Dict.toList          
+    >> Dict.toList
+
+gatherByToStr : (a -> b) -> (b -> String) -> List a -> List (b , List a)
+gatherByToStr f toS = 
+    List.foldl (\a ->
+                 let i = f a |> toS
+                 in Dict.update i 
+                      (Maybe.map (\l -> l ++ [a])
+                      >> Maybe.withDefault ([a])
+                      >> Just) 
+               ) Dict.empty
+    >> Dict.toList
+    >> List.filterMap (\(k , l) ->
+         case l of
+             [] -> Nothing    
+             x :: _ -> Just (f x , l))
+                           
+gatherByToStrStable : (a -> b) -> (b -> String) -> List a -> List (b , List a)
+gatherByToStrStable f toS =
+    List.map (\x -> (f x , x))
+   >> List.foldr (\(b , x) -> \la ->
+         case la of
+             [] -> [(b , [x])]
+             (bb , ll) :: xs ->
+                  if (toS bb == toS b)
+                  then (bb , x :: ll) :: xs
+                  else (b , [x]) :: la    
+                 ) []      

@@ -14,6 +14,14 @@ import MicroAgda.Internal.Ctx as C
 import MicroAgda.StringTools exposing (..)
 import MicroAgda.TypeChecker as TC exposing (..)
 
+import Css exposing (..)
+import Html
+import Html.Styled exposing (..)
+import Html.Styled.Attributes exposing (css, href, src)
+import Html.Styled.Events exposing (onClick , on , stopPropagationOn )
+
+import Combinatorics as CO
+
 import ResultExtra exposing (..)
 
 swap : (a -> b -> c ) -> b -> a -> c
@@ -31,8 +39,7 @@ pretty : C.Ctx -> List String -> I.Term -> Maybe R.Raw
 pretty c bnd t =
     (C.arity (C.CT t))
    |> Maybe.andThen (\arr ->     
-        let faces = List.range 0 ((2 * arr) - 1)
-                    |> List.map (\x -> (x//2 , (modBy 2 x == 1) ))
+        let faces = CO.allFaces arr
                     |> mapListResult (cuTyFace c (C.CT t) >> Result.map (internal2raw c bnd))
                     
             head = lookByIntInList ["_≡_" , "Sq" , "Cu"] (arr - 1)
@@ -102,6 +109,10 @@ t2strWS c ls = (internal2raw c ls) >> R.raw2String
           
 t2strNoCtx =  t2str C.emptyCtx
 
+-- sig2Html : C.CType -> Result String (Html msg)
+-- sig2Html = todo ""
+
+           
 -- UNSAFE use only after typechecking
 -- raw2internal : C.Ctx -> R.Raw -> I.Term
 -- raw2internal = todo ""

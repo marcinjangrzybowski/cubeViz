@@ -216,7 +216,10 @@ fromDimIndex dc (DimIndex k) =
    |> ResultExtra.swap lookByIntInList k
    |> Maybe.map Tuple.first   
    |> Maybe.withDefault -1   
-               
+
+dimIndexToName : DCtx -> DimIndex -> Maybe String      
+dimIndexToName dc x = C.lookNameByInt (toCtx dc) (fromDimIndex dc x)
+      
 dimOfCtx : DCtx -> Int
 dimOfCtx dc = (nOfDimOfCtx dc) - (List.length (Dict.keys dc.bounds))
 
@@ -269,10 +272,6 @@ mkBound dc (i , b) =
           else (Err "not in context!")
           )
 
-
--- mkBoundSFFixedOrientation :  DCtx -> (Int , Bool) -> Result String DCtx
--- mkBoundSFFixedOrientation dc (i , b) =
---     todo ""
         
 mkBoundSF : DCtx -> SubFace -> Result String DCtx
 mkBoundSF dc =
@@ -532,10 +531,33 @@ makeGenericTerm dc i =
                              
                      )   )         
                               )  |> Result.map (pairR dcc)  
-       ) |> describeErr ("makeGenericTerm : ")           
+       ) |> describeErr ("makeGenericTerm : ")
+      
+-- can be easily generalized to subfaces
+contextualizeFace : DCtx -> Int -> Face -> C.CType -> Result String (DCtx , I.Term)       
+contextualizeFace dc n (i , b) ct =
 
-       
-         
+     mkBoundSF dc (faceToSubFace n (i , b))
+     |> Result.andThen (\dcSF ->    
+     TC.cuTyFace (toCtx dc) ct (i , b)
+      |> Result.andThen
+          (\tm ->
+             List.foldl
+               (\j -> Result.andThen ( \tmF ->
+                let jj = fromDimIndex dcSF (DimIndex j)
+                in I.mkApp tmF (I.ctxVar jj) 
+                
+               ))
+               (Ok tm) (range (n - 1))
+              
+          )                   
+
+      |> Result.map (Tuple.pair dcSF)
+    ) |> describeErr "contextualizeFace"                       
+    -- case newDims of
+    --     0 -> Ok (dc , tm)
+    --     _ -> todo ""     
+    
 -- contextualizeCub : Int -> Int -> I.Term -> Result String (I.Term)
 -- contextualizeCub startI dims tm =
 --     (case dims of

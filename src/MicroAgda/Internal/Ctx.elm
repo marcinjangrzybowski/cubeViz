@@ -147,6 +147,8 @@ substInCtx2 (c , t) i (x , ct) =
                         
                    else (Err "Wrong type while substituting")                           
 
+
+-- it is "Cubical" arity!!! not usual one...                       
 arity : CType -> Maybe Int
 arity x =
     case (toPiData (toTm x)) of
@@ -160,3 +162,18 @@ arity x =
                        (Var _ []) -> Just 0                                
                        _ -> Nothing
                        
+
+-- works only on "proper" cubical types, where I and only I apears at the end ane only on the end                            
+toCubical : Ctx -> CType -> (Ctx , CType)
+toCubical c ct =
+  case toPiData (toTm ct) of
+      Nothing ->  (c , ct)
+      Just (do , bo) ->         
+          let tyTail = (absApply bo (Def (FromContext ( (List.length c) )) []))
+              tyHead = CT do.unDom
+              cTail = extend c bo.absName tyHead        
+          in
+          case (tyHead , tyTail) of
+              (CT (Def (BuildIn Interval) []) , _) -> (c , ct)
+              (_ , Ok t) -> toCubical cTail (CT t)
+              _ -> (c , ct)              

@@ -69,7 +69,7 @@ type Msg =
    | ExitFullScreen
    | FromWindow (Maybe Address) (Maybe AllWorkType)  
    | GotNewInspectorSize (Maybe (Float , Float))
-   | UpdateInspectorSize
+   | UpdateInspectorSize 
      
 port setLocHash : String -> Cmd msg
 
@@ -96,14 +96,14 @@ update msg model =
                                , cachedWinWork = Nothing
                                }
                               , Just (
-                                       Task.perform identity (Task.succeed UpdateInspectorSize)
+                                       updateInspectorSizeTask
                                      ))
       ExitFullScreen -> ( {model | fullScreenMode = False }
                               , Nothing)
       FromWindow mbAddrs mbCache ->
                            -- let _ = log "xx" mbAddrs in
                            ( {model | selectedAddress = mbAddrs , cachedWinWork = mbCache }
-                              , Nothing)
+                              , Just (updateInspectorSizeTask) )
       UpdateInspectorSize -> (model , Just (
                                    getElement "inspectorBox"
                                  |> Task.attempt (
@@ -115,8 +115,8 @@ update msg model =
                                  )  
                               )  
       GotNewInspectorSize mbWH ->
-          let insS = log ("mbWH") (mbWH)
-          in
+          -- let insS = log ("mbWH") (mbWH)
+          -- in
             ({ model | inspectorSize = mbWH}  , Nothing) 
     ) |> (\(m , c) -> (m , c |> Maybe.withDefault (setLocHash (model2hash m))))
                         
@@ -182,7 +182,9 @@ readFileTask upf = Task.perform identity (Task.succeed (ReadFile upf))
 
 setInspectedDefName : String -> Cmd Msg
 setInspectedDefName defName = Task.perform identity (Task.succeed (ShowDiagram defName))  
-                   
+
+updateInspectorSizeTask = Task.perform identity (Task.succeed UpdateInspectorSize)
+                              
 readFileAndShowTask : String -> String -> Cmd Msg
 readFileAndShowTask fName defName =
     Cmd.batch [ readFileTask fName , setInspectedDefName defName ]
@@ -192,6 +194,7 @@ readFileAndShowTask fName defName =
                
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    -- BE.onAnimationFrame (\_ -> UpdateInspectorSize)  
   BE.onResize (\_ _ -> UpdateInspectorSize)     
 -- GotNewInspector
 
