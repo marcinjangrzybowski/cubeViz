@@ -2,7 +2,7 @@
 
 
 
-# Experimental tool for visualization terms in cubical Agda.
+# Experimental tool for visualization of cubical Agda terms.
 
 At this stage of development, the only utility of this tool is limited to helping in developing some intuition about more complicated terms involving nested hcomp in cubical Agda. By examining applications of assoc in different ways ([lhs](https://raw.githack.com/marcinjangrzybowski/cubeViz/master/main.html#assocAlt,pentA) vs [rhs](https://raw.githack.com/marcinjangrzybowski/cubeViz/master/main.html#assocAlt,pentB')), I was able to write a [tedious proof of pentagon-identity](https://github.com/agda/cubical/blob/77fbf78ddc57d499a51e0cc4e37508c6c3caed29/Cubical/Foundations/GroupoidLaws.agda#L296).
 
