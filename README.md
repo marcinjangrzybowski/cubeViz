@@ -45,3 +45,22 @@ if you have two arguments of the same type, they will be created in different wa
 
 
 Diagrams and generic arguments can be created for terms of arbitrary dimensions. But rendering is implemented only for 2d now. Presenting diagrams of higher dimension pose a challenge in terms of UI/UX. 
+
+
+Those cubical primitives are implemented at the moment:
+
+* I0
+* I1
+* Max
+* Min 
+* Neg
+* Partial   
+* IsOne 
+* OneIsOne 
+* Sub      
+* Hcomp
+* OutS      
+* PathP
+* InS 
+
+All the machinery for transport and gluing is missing for now. 
